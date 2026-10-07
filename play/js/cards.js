@@ -65,7 +65,7 @@
     text: { play: '嘲讽。除了挡路，没有任何作用' }, flavor: '耄耋老兵扎的稻草奶娃，专门用来拖时间。' });
 
   /* ---------- 常驻市场（无限供应） ---------- */
-  def('errand', { name: '跑腿奶娃', type: 'char', cost: 2, art: 'baby', permanent: true,
+  def('errand', { name: '跑腿奶蛙', type: 'char', cost: 2, art: 'baby', permanent: true,
     play: [{ gain: 'coin', n: 2 }], scrap: [{ gain: 'power', n: 2 }],
     text: { play: '+2{c}', scrap: '+2{p}' }, flavor: '随叫随到。跑不动了就冲上前线。' });
 
@@ -73,9 +73,9 @@
   def('rich', { name: '奶蛋守护者', type: 'char', faction: 'egg', cost: 2, art: 'egg',
     play: [{ gain: 'coin', n: 2 }], ally: [{ trash: { from: ['hand', 'discard'], optional: true } }],
     text: { play: '+2{c}', ally: '获得 1 次删牌机会' }, flavor: '圆滚滚的身体里装着整个奶国的积蓄。' });
-  def('sleeper', { name: '慵懒奶蛙', type: 'char', faction: 'egg', cost: 3, art: 'sleeper',
+  def('sleeper', { name: '灰心奶蛙', type: 'char', faction: 'egg', cost: 3, art: 'sleeper',
     play: [{ gain: 'coin', n: 2 }, { if: 'hasStatue', then: [{ draw: 1 }] }], ally: [{ gain: 'coin', n: 1 }, { shield: 4 }],
-    text: { play: '+2{c}。若你有雕塑，抽 1 张', ally: '+1{c} +4{s}' }, flavor: '睡醒了就数奶蛋，数完了接着睡。' });
+    text: { play: '+2{c}。若你有雕塑，抽 1 张', ally: '+1{c} +4{s}' }, flavor: '数了一遍奶蛋，叹了口气，又数了一遍。' });
   def('gate', { name: '奶门的世界', type: 'status', kind: 'buff', faction: 'egg', cost: 3, art: 'gate', artMode: 'photo', fullArt: true,
     play: [{ gain: 'coin', n: 1 }, { trash: { from: ['hand', 'discard'] } }], ally: [{ trash: { from: ['hand', 'discard'] } }], passive: 'gate',
     text: { play: '+1{c}，获得 1 次删牌机会。本回合每删 1 张自己的牌 +1{c}', ally: '获得 1 次删牌机会' }, flavor: '推开这扇门，牌库就轻了。' });
@@ -122,7 +122,7 @@
     play: [{ gain: 'energy', n: 1 }, { sigmaTrash: true }], ally: [{ gain: 'energy', n: 1 }], passive: 'sigma',
     text: { play: '+1{e}。本回合每张产生{e}的牌额外 +1{e}。获得 1 次删牌机会（可删抽牌堆中的牌）', ally: '+1{e}' }, flavor: '自律，是最好的奶劲。' });
 
-  def('disdain', { name: '神之藐视', type: 'status', kind: 'guard', faction: 'spirit', cost: 4, art: 'disdain',
+  def('disdain', { name: '惊鸿一瞥', type: 'status', kind: 'guard', faction: 'spirit', cost: 4, art: 'disdain',
     play: [{ gain: 'energy', n: 1 }], ally: [{ draw: 1 }], guard: { cap: 6 },
     text: { play: '+1{e}。守势：你每回合最多失去 6 点生命', ally: '抽 1 张' }, flavor: '它看了你一眼。你的拳头就软了。' });
 

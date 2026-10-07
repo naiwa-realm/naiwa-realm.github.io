@@ -778,7 +778,7 @@
           if (!isMine(ev.seat)) FX.toast(`对手进入守势：${CARDS[ev.id].name}——${guardDesc(ev.id)}`);
           await FX.wait(200); break;
         }
-        case 'guardCap': { const r = A.hero[ev.seat]; FX.float(r.cx, r.y - 30, `神之藐视 挡下 ${ev.cut}`, 's'); FX.burst(r.cx, r.cy, { n: 14, color: ['#c9b4ff', '#fff'], speed: 200, size: 7, shape: 'shard', gravity: 200 }); break; }
+        case 'guardCap': { const r = A.hero[ev.seat]; FX.float(r.cx, r.y - 30, `惊鸿一瞥 挡下 ${ev.cut}`, 's'); FX.burst(r.cx, r.cy, { n: 14, color: ['#c9b4ff', '#fff'], speed: 200, size: 7, shape: 'shard', gravity: 200 }); break; }
         case 'thorns': {
           const from = A.hero[ev.from], to = A.hero[ev.seat];
           await FX.orb({ x: from.cx, y: from.cy }, { x: to.cx, y: to.cy }, '#9fe07a', { size: 22, dur: 420, lift: 80 });

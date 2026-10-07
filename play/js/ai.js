@@ -162,7 +162,7 @@
         const cheap = o.statues.filter(s => s.hp <= p.power).sort((a, b) => a.hp - b.hp)[0];
         if (cheap) return { type: 'attack', seat, target: cheap.uid };
       }
-      // 对方有伤害上限（关卡「奶壳护体」/ 守势「神之藐视」）：超出上限的奶之力先拿去拆雕塑
+      // 对方有伤害上限（关卡「奶壳护体」/ 守势「惊鸿一瞥」）：超出上限的奶之力先拿去拆雕塑
       const oShield = p.pierce ? 0 : (o.shield || 0);
       const mcap = (st.mutators || []).find(m => m.id === 'heroShield' && m.seat === 1 - seat);
       const gcap = E.guardValue(o, 'cap');

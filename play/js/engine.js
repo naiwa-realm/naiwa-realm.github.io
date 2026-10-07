@@ -209,7 +209,7 @@
     if (absorbed) { p.shield -= absorbed; n -= absorbed; p.stats.absorbed += absorbed; log(state, seat, `${p.name} 的奶壳挡下了 ${absorbed} 点伤害`); }
     // 守势·生命上限：本回合最多失去 cap 点生命
     const cap = guardValue(p, 'cap');
-    if (cap) { const room = Math.max(0, cap - p.lost); if (n > room) { p.stats.capped += n - room; ev(state, { t: 'guardCap', seat, cut: n - room, cap }); log(state, seat, `${p.name} 的神之藐视挡掉了 ${n - room} 点伤害`); n = room; } }
+    if (cap) { const room = Math.max(0, cap - p.lost); if (n > room) { p.stats.capped += n - room; ev(state, { t: 'guardCap', seat, cut: n - room, cap }); log(state, seat, `${p.name} 的惊鸿一瞥挡掉了 ${n - room} 点伤害`); n = room; } }
     const before = p.hp;
     p.hp = Math.max(0, p.hp - n); p.lost += before - p.hp;
     state.seats[other(seat)].stats.dmg += before - p.hp;
