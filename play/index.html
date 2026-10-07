@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#15342e">
+  <meta name="description" content="奶蛙领域：四大阵营联动、献祭与雕塑攻防的奶国牌库构筑对决。">
+  <title>奶蛙领域</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap">
+  <link rel="stylesheet" href="css/table.css">
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+    <section id="screen-menu" class="screen"></section>
+    <section id="screen-campaign" class="screen"></section>
+    <section id="screen-lobby" class="screen"></section>
+
+    <section id="screen-game" class="screen">
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark">蛙</span><div><b>奶蛙领域</b><small>THE MILK REALM</small></div></div>
+        <span class="mode-chip" id="modeChip">对局</span>
+        <div class="round-chip">第 <b id="roundNo">01</b> 回合 <span class="who" id="whoTurn">你的回合</span></div>
+        <nav class="top-actions">
+          <button class="tbtn touch-menu" data-top="menu">☰ 菜单</button>
+          <button class="tbtn" data-top="speed">动画 1×</button>
+          <button class="tbtn on" data-top="sound">音效 开</button>
+          <button class="tbtn" data-top="confirm">出牌确认 关</button>
+          <button class="tbtn" data-top="mission" id="btnMission">关卡任务</button>
+          <button class="tbtn" data-top="log">对局记录</button>
+          <button class="tbtn" data-top="codex">图鉴</button>
+          <button class="tbtn" data-top="rules">规则</button>
+          <button class="tbtn" data-top="concede">认输</button>
+          <button class="tbtn" data-top="exit">退出</button>
+        </nav>
+      </header>
+
+      <div class="table">
+        <div class="felt-emblem">奶蛙领域</div>
+
+        <!-- 对手（上方） -->
+        <section class="strip op">
+          <div class="hero op" id="hero-op"><div class="portrait"></div><div class="meta"><div class="eyebrow">对手</div><h3>对手</h3><span class="hp"><i></i><b>30</b><small>/ 30</small></span><div class="tags"></div></div></div>
+          <div class="statues" id="statues-op"></div>
+          <div class="opp-hand" id="oppHand"></div>
+          <div class="opp-res" id="oppRes"><span class="zone-label">对手资源</span><div class="mini-res"><span class="c">◉ 0</span><span class="e">✦ 0</span><span class="p">✷ 0</span></div></div>
+          <div class="piles"><div class="pile" id="deck-op"></div><div class="pile" id="discard-op"></div></div>
+        </section>
+
+        <!-- 市场 -->
+        <section class="market-band">
+          <div class="market-label"><b>市场</b></div>
+          <div class="supply back" id="supply" title="市场补给堆"><span class="n" id="supplyN">0</span></div>
+          <div class="slot errand" id="errandSlot"></div>
+          <div class="market" id="market"></div>
+          <aside class="ticker" id="ticker"><div class="mission" id="mission" style="display:none"></div><h4><span>战况</span><button data-top="log">全部 ›</button></h4><ul id="tickerList"></ul></aside>
+        </section>
+
+        <!-- 出牌区 -->
+        <section class="play-zone" id="playZone">
+          <span class="zone-label">本回合出牌</span>
+          <div class="owner" id="playOwner"></div>
+          <div class="status-chips" id="statusChips"></div>
+          <div class="play-cards" id="playcards"></div>
+          <div class="limbo" id="limbo"><span>西格奶 · 删牌区</span><div class="slot-in" id="limboSlot"></div><button id="btnUndoTrash" data-act="undoTrash">撤回</button></div>
+          <div class="trash-ops" id="trashOps"><b id="trashOpsN">删牌机会 ×1</b><small>本回合内有效，可删手牌、弃牌堆，或市场中价格 ≤ 4 的牌</small><button class="btn gold" data-act="trashPick">选择要删的牌</button></div>
+        </section>
+        <div class="pending" id="pending"></div>
+
+        <!-- 自己（下方） -->
+        <section class="strip me">
+          <div class="hero me" id="hero-me"><div class="portrait" title="按住拖动以攻击"></div><div class="meta"><div class="eyebrow">你</div><h3>你</h3><span class="hp"><i></i><b>30</b><small>/ 30</small></span><div class="tags"></div></div></div>
+          <div class="statues" id="statues-me"></div>
+          <div class="resources">
+            <div class="orb coin" id="orb-coin" title="奶蛋：购买市场的牌"><div class="gem">◉</div><b>0</b><small>奶蛋</small></div>
+            <div class="orb energy" id="orb-energy" title="奶劲：每点额外抽 1 张"><div class="gem">✦</div><b>0</b><small>奶劲</small></div>
+            <div class="orb power" id="orb-power" title="奶之力：拖到目标上攻击"><div class="gem">✷</div><b>0</b><small>奶之力</small></div>
+          </div>
+          <div class="piles"><div class="pile" id="deck-me"></div><div class="pile" id="discard-me"></div></div>
+          <div class="actions">
+            <button class="btn primary" id="btnEnd" data-act="end">结束回合</button>
+            <button class="btn ghost" id="btnAll" data-act="all">全部打出<kbd>空格</kbd></button>
+            <button class="btn ghost" id="btnDraw" data-act="draw">奶劲抽牌<kbd>D</kbd></button>
+          </div>
+        </section>
+
+        <section class="hand" id="hand"></section>
+      </div>
+
+      <div class="emotes" id="emotes">
+        <button data-act="emote" data-id="hi">你好！</button><button data-act="emote" data-id="nice">好牌！</button><button data-act="emote" data-id="laugh">哈哈哈哈</button><button data-act="emote" data-id="think">让我想想…</button><button data-act="emote" data-id="gg">打得好</button>
+      </div>
+      <div class="spotlight-dim" id="spotDim"></div>
+    </section>
+
+    <div class="fx" id="fx"><canvas id="particles"></canvas><svg id="arrows" viewBox="0 0 1600 900"></svg></div>
+    <div class="preview hidden" id="preview"></div>
+    <div class="toast" id="toast"></div>
+    <div class="overlay hidden" id="overlay"></div>
+  </div>
+</div>
+<div class="rotate-hint">横屏游玩效果更好</div>
+<div id="rail" class="rail"><button data-rail="menu" class="r-menu">☰<small>菜单</small></button><button data-rail="all">全部<br>打出</button><button data-rail="draw">抽牌<small>奶劲 0</small></button><button data-rail="end" class="r-end">结束<br>回合</button></div>
+<div id="sheet" class="sheet hidden"><div class="sh-back"></div><div class="sh-panel"><div class="sh-card"></div><div class="sh-side"><div class="sh-tip"></div><div class="sh-btns"></div></div></div></div>
+
+<script src="js/cards.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/packs.js"></script>
+<script src="js/net.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/screens.js"></script>
+<script src="js/coach.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

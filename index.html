@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15342e">
+<title>奶蛙领域 · 奶蛙梗 × 牌库构筑对战</title>
+<meta name="description" content="奶蛙领域：免费的网页卡牌构筑对战游戏。四大阵营、状态牌连招、两部远征关卡、电脑对手与免服务器联机，点开就能玩。">
+<meta property="og:title" content="奶蛙领域 · THE MILK REALM">
+<meta property="og:description" content="奶蛙梗 × 牌库构筑对战。免费、开源、点开即玩。">
+<meta property="og:image" content="assets/cover.jpg">
+<link rel="icon" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap">
+<style>
+:root{
+  --bg:#0f2621;--bg-2:#15342e;--panel:#1a3b33;--line:#e6d18e33;--line-2:#e6d18e66;
+  --gold:#e8cc7a;--gold-2:#c9a24f;--cream:#ffefbf;--text:#dfe5d2;--muted:#9fa98f;
+  --egg:#f0c04e;--laugh:#ee6a43;--iron:#5f9bd0;--spirit:#a487ec;
+  --display:'ZCOOL KuaiLe','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
+  --body:'PingFang SC','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,#24513f 0%,var(--bg) 60%) fixed,var(--bg);color:var(--text);font:16px/1.75 var(--body);-webkit-font-smoothing:antialiased}
+a{color:var(--gold)}
+img{max-width:100%;display:block}
+.wrap{width:min(1120px,100% - 32px);margin:0 auto}
+
+/* 顶栏 */
+.nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);background:#0f2621cc;border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;gap:18px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--cream);font:400 22px var(--display);letter-spacing:.06em;white-space:nowrap}
+.brand i{width:34px;height:34px;border-radius:10px;background:linear-gradient(160deg,var(--gold),var(--gold-2));color:#21402f;display:grid;place-items:center;font-style:normal;font-size:19px}
+.nav nav{margin-left:auto;display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.nav nav a{color:var(--text);text-decoration:none;font-size:14px;padding:6px 10px;border-radius:8px;white-space:nowrap}
+.nav nav a:hover{background:#ffffff10;color:var(--cream)}
+
+/* 首屏 */
+.hero{position:relative;overflow:hidden;padding:72px 0 40px;text-align:center}
+.hero h1{margin:0;font:400 clamp(56px,11vw,120px)/1 var(--display);letter-spacing:.08em;color:var(--cream);text-shadow:0 4px 0 #8a6a2b,0 10px 30px #000a}
+.hero .en{margin:14px 0 0;font-size:13px;letter-spacing:.5em;color:#cfd5bf;padding-left:.5em}
+.hero .tag{display:inline-block;margin:26px 0 0;padding:8px 18px;border-radius:12px;background:var(--gold);color:#2a2410;font:400 clamp(18px,3vw,24px) var(--display);box-shadow:0 6px 0 #8a6a2b}
+.hero p.lead{max-width:640px;margin:26px auto 0;color:var(--text);font-size:17px}
+.badges{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:18px}
+.badge{font-size:13px;padding:3px 12px;border-radius:999px;border:1px solid var(--line-2);color:var(--gold)}
+.badge.ver{background:#e8cc7a1a}
+.cta{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:32px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;border-radius:16px;font:400 20px var(--display);letter-spacing:.06em;padding:14px 28px;transition:transform .12s,box-shadow .12s;cursor:pointer;border:0}
+.btn.primary{background:linear-gradient(180deg,#f7e09a,var(--gold) 50%,var(--gold-2));color:#2a2410;box-shadow:0 6px 0 #8a6a2b,0 16px 40px #e8cc7a33;font-size:26px;padding:16px 44px}
+.btn.primary:hover{transform:translateY(-2px);box-shadow:0 8px 0 #8a6a2b,0 20px 50px #e8cc7a44}
+.btn.primary:active{transform:translateY(4px);box-shadow:0 2px 0 #8a6a2b}
+.btn.ghost{background:#ffffff0c;color:var(--cream);border:1px solid var(--line-2)}
+.btn.ghost:hover{background:#ffffff18}
+.btn small{font:13px var(--body);color:var(--muted);letter-spacing:0}
+.sublinks{margin-top:18px;display:flex;justify-content:center;gap:6px 18px;flex-wrap:wrap;font-size:14px}
+.sublinks a{color:var(--muted);text-decoration:none;border-bottom:1px dashed #9fa98f66}
+.sublinks a:hover{color:var(--cream)}
+.frogs{position:absolute;inset:0;pointer-events:none;z-index:-1}
+.frogs img{position:absolute;bottom:-10px;filter:drop-shadow(0 12px 18px #0008);animation:bob 4s ease-in-out infinite;opacity:.95}
+@keyframes bob{50%{transform:translateY(-10px)}}
+.shot-hero{margin:44px auto 0;width:min(980px,100%);border-radius:18px;overflow:hidden;border:1px solid var(--line-2);box-shadow:0 30px 80px #000c}
+
+/* 区块 */
+section.block{padding:56px 0}
+.eyebrow{font-size:12px;letter-spacing:.3em;color:var(--gold-2);font-weight:700}
+h2{margin:6px 0 10px;font:400 clamp(28px,5vw,40px)/1.2 var(--display);color:var(--cream);letter-spacing:.04em}
+.intro{color:var(--muted);max-width:720px;margin:0 0 28px}
+
+/* 截图 */
+.gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.gallery figure{margin:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#0b1d18;cursor:zoom-in}
+.gallery figure img{aspect-ratio:16/9;object-fit:cover;width:100%;transition:transform .3s}
+.gallery figure:hover img{transform:scale(1.03)}
+.gallery figcaption{padding:10px 14px;font-size:14px;color:var(--text)}
+.gallery figcaption b{color:var(--cream)}
+
+/* 阵营 */
+.factions{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.fac{position:relative;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,color-mix(in srgb,var(--c) 30%,#1a3b33),#14302a 70%);border:1px solid color-mix(in srgb,var(--c) 55%,transparent);padding:0 0 18px}
+.fac .art{height:190px;display:flex;align-items:flex-end;justify-content:center;background:radial-gradient(circle at 50% 70%,color-mix(in srgb,var(--c) 70%,transparent),transparent 65%)}
+.fac .art img{max-height:180px;width:auto;filter:drop-shadow(0 10px 14px #0009)}
+.fac h3{margin:12px 18px 2px;font:400 26px var(--display);color:var(--cream);display:flex;align-items:center;gap:10px}
+.fac h3 i{font-style:normal;width:30px;height:30px;border-radius:50%;background:var(--c);color:#1c1608;display:grid;place-items:center;font-size:16px}
+.fac p{margin:4px 18px 0;font-size:14px;color:var(--text)}
+.fac .cards{margin:10px 18px 0;font-size:13px;color:var(--muted)}
+
+/* 模式 / 玩法 */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+.card h3{margin:0 0 6px;font:400 22px var(--display);color:var(--cream)}
+.card p{margin:0;font-size:15px}
+.card .mi{width:40px;height:40px;border-radius:12px;background:linear-gradient(160deg,var(--gold),var(--gold-2));color:#21402f;display:grid;place-items:center;font:400 21px var(--display);margin-bottom:12px}
+.steps{counter-reset:s;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0;margin:0;list-style:none}
+.steps li{counter-increment:s;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;font-size:15px}
+.steps li:before{content:counter(s);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--gold);color:#21402f;font:400 17px var(--display);margin-bottom:8px}
+.steps b{color:var(--cream)}
+.res{font-weight:700}.res.c{color:#f2c24b}.res.e{color:#59d2c0}.res.p{color:#ff7a52}
+
+/* 扩展包 / 更新 */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.note{border-left:3px solid var(--gold);background:#e8cc7a10;border-radius:12px;padding:14px 18px;font-size:15px}
+.roadmap{list-style:none;padding:0;margin:14px 0 0}
+.roadmap li{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line);font-size:15px}
+.roadmap li:last-child{border:0}
+.roadmap .st{flex:none;font-size:12px;padding:2px 10px;border-radius:999px;border:1px solid var(--line-2);color:var(--gold);margin-top:3px}
+.roadmap .st.done{background:#3e6b4f;border-color:#7fc29a;color:#e8ffe9}
+.changes h3{margin:0;font:400 20px var(--display);color:var(--cream)}
+.changes ul{margin:6px 0 16px;padding-left:20px;font-size:14px}
+.changes .more{font-size:14px}
+
+/* 存档 */
+.save-row{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.save-row .note{flex:1;min-width:260px}
+
+footer{border-top:1px solid var(--line);padding:30px 0 50px;color:var(--muted);font-size:13px}
+footer .wrap{display:flex;gap:10px 24px;flex-wrap:wrap;justify-content:space-between}
+footer a{color:var(--muted)}
+
+/* 大图 */
+.lightbox{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;z-index:50;padding:16px;cursor:zoom-out}
+.lightbox.on{display:flex}
+.lightbox img{max-width:min(1600px,100%);max-height:100%;border-radius:12px;box-shadow:0 20px 60px #000}
+
+@media (max-width:900px){
+  .factions{grid-template-columns:repeat(2,1fr)}
+  .grid3,.steps{grid-template-columns:1fr 1fr}
+  .two{grid-template-columns:1fr}
+  .frogs{opacity:.35}
+}
+@media (max-width:600px){
+  .nav nav a.hide-sm{display:none}
+  .gallery,.factions,.grid3,.steps{grid-template-columns:1fr}
+  .hero{padding-top:48px}
+  .btn.primary{width:100%}
+  .cta .btn.ghost{width:100%}
+  .fac .art{height:160px}
+  section.block{padding:40px 0}
+}
+</style>
+</head>
+<body>
+
+<header class="nav"><div class="wrap">
+  <a class="brand" href="./"><i>蛙</i>奶蛙领域</a>
+  <nav>
+    <a href="#shots" class="hide-sm">截图</a>
+    <a href="#factions" class="hide-sm">阵营</a>
+    <a href="#how">玩法</a>
+    <a href="#packs">扩展包</a>
+    <a href="#changes" class="hide-sm">更新</a>
+    <a href="#" data-gh="repo">GitHub</a>
+  </nav>
+</div></header>
+
+<section class="hero">
+  <div class="frogs" aria-hidden="true">
+    <img src="play/assets/art/laugh.webp" alt="" style="left:2%;height:300px;animation-delay:-1s">
+    <img src="play/assets/art/egg.webp" alt="" style="left:15%;height:130px;animation-delay:-2.2s">
+    <img src="play/assets/art/cat.webp" alt="" style="right:16%;height:140px;animation-delay:-1.6s">
+    <img src="play/assets/art/kungfu.webp" alt="" style="right:1%;height:290px;animation-delay:-2.6s">
+  </div>
+  <div class="wrap">
+    <h1>奶蛙领域</h1>
+    <p class="en">THE MILK REALM</p>
+    <div class="tag">奶蛙梗 × 牌库构筑对战</div>
+    <p class="lead">招募奶蛙、删掉废牌、叠起状态，一回合打出一整套连招。四大阵营、两部远征、电脑对手和免服务器联机，打开浏览器就能玩。</p>
+    <div class="badges"><span class="badge ver">v8.3</span><span class="badge">免费</span><span class="badge">开源</span><span class="badge">开发中</span><span class="badge">电脑 / 手机</span></div>
+    <div class="cta">
+      <a class="btn primary" href="play/">▶ 立即游玩</a>
+      <a class="btn ghost" href="#" data-gh="release">⬇ 下载离线版 <small>单个 HTML · 约 2 MB</small></a>
+    </div>
+    <div class="sublinks">
+      <a href="#packs">扩展包工坊</a>
+      <a href="#changes">更新日志</a>
+      <a href="#save">存档说明</a>
+      <a href="#" data-gh="issues">反馈问题</a>
+    </div>
+    <img class="shot-hero" src="assets/screenshots/battle.webp" alt="对局画面：牌桌、市场、手牌和雕塑" width="1600" height="900">
+  </div>
+</section>
+
+<section class="block" id="shots"><div class="wrap">
+  <div class="eyebrow">SCREENSHOTS</div>
+  <h2>游戏截图</h2>
+  <div class="gallery">
+    <figure><img src="assets/screenshots/map.webp" alt="第一部大地图" loading="lazy"><figcaption><b>第一部 · 奶国远征</b>　从教学关一路打到暗影国王，9 关大地图</figcaption></figure>
+    <figure><img src="assets/screenshots/shelf.webp" alt="第二部博古架" loading="lazy"><figcaption><b>第二部 · 奶国之战</b>　耄耋军团摆上博古架，星星靠操作拿</figcaption></figure>
+    <figure><img src="assets/screenshots/codex.webp" alt="卡牌图鉴" loading="lazy"><figcaption><b>状态牌</b>　增益、守势、蓄势，先打状态再打角色</figcaption></figure>
+    <figure><img src="assets/screenshots/menu.webp" alt="主菜单" loading="lazy"><figcaption><b>多种模式</b>　快速对战三档电脑、远征、同屏与联机</figcaption></figure>
+  </div>
+</div></section>
+
+<section class="block" id="factions"><div class="wrap">
+  <div class="eyebrow">FACTIONS</div>
+  <h2>四大阵营</h2>
+  <p class="intro">同阵营的牌一起打出会触发「联动」，场上的雕塑也算阵营。起始牌是中立的普通奶娃和大笑奶蛙，删掉它们，牌组才会越打越强。</p>
+  <div class="factions">
+    <div class="fac" style="--c:var(--egg)"><div class="art"><img src="play/assets/art/chieftain.webp" alt="奶国大力士"></div>
+      <h3><i>躺</i>躺平派</h3><p>攒奶蛋、套奶壳、删牌，躺着也能赢。</p><div class="cards">奶蛋守护者 · 慵懒奶蛙 · 奶国大力士 · 奶门的世界</div></div>
+    <div class="fac" style="--c:var(--laugh)"><div class="art"><img src="play/assets/art/rocket.webp" alt="火箭奶蛙"></div>
+      <h3><i>绷</i>绷不住团</h3><p>笑到停不下来，奶之力一波打满。</p><div class="cards">火箭奶蛙 · 学园笑匠 · 狂笑 · 憋笑 · 哈家军</div></div>
+    <div class="fac" style="--c:var(--iron)"><div class="art"><img src="play/assets/art/nolaugh.webp" alt="我再也不会笑了"></div>
+      <h3><i>硬</i>嘴硬帮</h3><p>雕塑、嘲讽与压制，就是不破防。</p><div class="cards">铁甲奶蛙 · 曾经的王 · 我再也不会笑了</div></div>
+    <div class="fac" style="--c:var(--spirit)"><div class="art"><img src="play/assets/art/sigma.webp" alt="西格奶"></div>
+      <h3><i>西</i>西格玛会</h3><p>自律抽牌、奶劲连锁，删到只剩精华。</p><div class="cards">猫耳奶蛙 · 飞天奶蛙 · 西格奶 · 神之藐视</div></div>
+  </div>
+</div></section>
+
+<section class="block" id="how"><div class="wrap">
+  <div class="eyebrow">HOW TO PLAY</div>
+  <h2>怎么玩</h2>
+  <p class="intro">双方各 30 点生命，每回合抽 5 张。先把对手生命打到 0 的一方获胜。第一次玩建议从「奶国远征」的教学关开始，教官奶蛙会一步一步带你。</p>
+  <ol class="steps">
+    <li><b>打出手牌</b><br>获得 <span class="res c">奶蛋</span>、<span class="res e">奶劲</span>、<span class="res p">奶之力</span>。同阵营的牌一起打还有联动。</li>
+    <li><b>用奶蛋招募</b><br>市场里有 5 张牌，买下的牌进入弃牌堆，之后洗回牌库。</li>
+    <li><b>用奶之力攻击</b><br>先拆掉对手的嘲讽雕塑，再打本体。奶劲可以多抽牌。</li>
+    <li><b>删牌变强</b><br>用删牌机会删掉起始的弱牌，好牌出现得越来越频繁。</li>
+  </ol>
+  <div class="grid3" style="margin-top:14px">
+    <div class="card"><div class="mi">战</div><h3>快速对战</h3><p>新手、标准、大师三档电脑对手，随时来一局。</p></div>
+    <div class="card"><div class="mi">征</div><h3>奶国远征</h3><p>两部共 17 关：教学章、BOSS 战、关卡规则和三星挑战，第二部有剧情。</p></div>
+    <div class="card"><div class="mi">对</div><h3>玩家对战</h3><p>同屏轮流对战，或者交换一次连接码点对点联机，不需要服务器。</p></div>
+  </div>
+</div></section>
+
+<section class="block" id="packs"><div class="wrap">
+  <div class="eyebrow">WORKSHOP</div>
+  <h2>扩展包工坊</h2>
+  <div class="two">
+    <div>
+      <p class="intro" style="margin-bottom:14px">扩展包是一个 JSON 文件：新卡牌、市场牌池，以后还有自定义关卡。游戏会把影响规则的内容算成一串「内容指纹」，联机时双方自动比对，保证两边玩的是同一套规则。</p>
+      <div class="note">现在可以在游戏主菜单「扩展包 → 导入并检查扩展包」检查格式是否正确。安装与启用在扩展包 v1 开放。<br><a href="#" data-gh="packs">格式说明（草案）→</a></div>
+      <p style="font-size:14px;color:var(--muted)">社区扩展包：<span id="packCount">读取中…</span></p>
+    </div>
+    <div class="card">
+      <h3>路线图</h3>
+      <ul class="roadmap">
+        <li><span class="st done">已完成</span><span>扩展包入口：格式版本、内容指纹、格式检查、联机指纹比对</span></li>
+        <li><span class="st">下一步</span><span>纯数据扩展包 v1：导入、校验、管理页，附示范扩展包和作者指南</span></li>
+        <li><span class="st">之后</span><span>联机时指纹不一致，可以把扩展包直接传给对方</span></li>
+        <li><span class="st">远期</span><span>带脚本的高级扩展包</span></li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<section class="block" id="changes"><div class="wrap">
+  <div class="eyebrow">CHANGELOG</div>
+  <h2>最近更新</h2>
+  <div class="two">
+    <div class="changes"><h3>v8.3 · 网站版与扩展包入口</h3><ul><li>游戏主页上线：从主页「立即游玩」进入网页版，也可以下载离线单文件版。</li><li>主菜单新增「存档」：导出 / 导入 <code>naiwa-save.json</code>，换设备、换浏览器前先导出一份；也可以复制成文本保存。</li><li>主菜单新增「扩展包」：显示本体版本和内容指纹，可以导入一个扩展包 JSON 做格式检查（扩展包 v1 正式开放前不会改变游戏），并列出网站上的社区扩展包目录。</li><li>扩展包格式草案（format 1）公布，见 <code>packs/README.md</code>。</li><li>联机握手时比对双方的游戏版本和内容指纹，不一致时直接提示双方，不会开局后才不同步。</li><li>主菜单右下角显示版本号和内容指纹。</li></ul><h3>v8.2 · 第二部星级下调</h3><ul><li>一回合出牌数改成「比 5 张手牌多一点」：战1 7 张、战4 9 张；单次伤害改成 11–14 点。</li><li>战4 橙色风暴：两颗星改成同一套奶劲抽牌打法能一起拿到。</li><li>战5 老兵不死：开局老兵有 3 个「训练假人」嘲讽雕塑，老兵生命 22 → 20。</li><li>战7 橙耄军团：星级改为「一回合内攻击本体 2 次」和「击碎 3 座雕塑」。</li><li>博古架上第二次出现的同一只猫，背后有金光，和第一次区分开。</li></ul><h3>v8.1 · 第一部大地图</h3><ul><li>第一部「奶国远征」改成大地图：9 关对应地图上 1–9 号圆盘，圆盘上浮着对手头像，下方显示星数。</li></ul><a class="more" href="#" data-gh="changelog">完整更新日志 →</a></div>
+    <div>
+      <div class="card" id="save">
+        <h3>存档在哪里？</h3>
+        <p>进度保存在你当前使用的浏览器里，不需要注册账号。换电脑、换浏览器或清除浏览器数据会丢失进度，所以请在游戏主菜单「存档」里先<b>导出 naiwa-save.json</b>，到新地方再导入。离线版和网页版的存档互不相通，同样用导出 / 导入搬过去。</p>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>离线版</h3>
+        <p>整个游戏就是一个 HTML 文件，下载后双击用浏览器打开即可，没网也能玩（只有联机需要网络）。每个版本都会保留在 <a href="#" data-gh="releases">Releases</a> 里。</p>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <span>奶蛙领域 v8.3 · 免费的粉丝作品，非商业用途。奶蛙等形象来自网络梗图，版权归原作者所有。</span>
+  <span><a href="#" data-gh="repo">GitHub</a> · <a href="#" data-gh="issues">反馈</a> · <a href="#" data-gh="changelog">完整更新日志</a></span>
+</div></footer>
+
+<div class="lightbox" id="lb"><img alt=""></div>
+
+<script>
+/* 自动识别仓库地址：<用户名>.github.io/<仓库名>/。自定义域名时把 FALLBACK 改成你的「用户名/仓库名」 */
+(function () {
+  var FALLBACK = '';
+  var h = location.hostname, seg = location.pathname.split('/').filter(Boolean)[0];
+  var repo = FALLBACK;
+  if (/\.github\.io$/.test(h)) { var user = h.replace(/\.github\.io$/, ''); repo = user + '/' + (seg && seg !== 'play' && seg.indexOf('.') < 0 ? seg : h); }
+  var gh = repo.indexOf('/') > 0 && repo.indexOf('__') < 0 ? 'https://github.com/' + repo : null;
+  var links = { repo: '', issues: '/issues', release: '/releases/latest', releases: '/releases', packs: '/blob/main/packs/README.md', changelog: '/blob/main/CHANGELOG.md' };
+  var local = { repo: '#', issues: '#', release: '#', releases: '#', packs: 'packs/README.md', changelog: 'CHANGELOG.md' };
+  document.querySelectorAll('[data-gh]').forEach(function (a) {
+    var k = a.getAttribute('data-gh');
+    a.href = gh ? gh + links[k] : local[k];
+    if (gh && k !== 'release') a.target = '_blank';
+  });
+  /* 社区扩展包数量 */
+  fetch('packs/index.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }).then(function (j) {
+    var n = (j.packs || []).length; document.getElementById('packCount').textContent = n ? n + ' 个' : '暂时还没有，欢迎投稿';
+  }).catch(function () { document.getElementById('packCount').textContent = '—'; });
+  /* 截图大图 */
+  var lb = document.getElementById('lb');
+  document.querySelectorAll('.gallery img, .shot-hero').forEach(function (img) {
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', function () { lb.firstElementChild.src = img.src; lb.classList.add('on'); });
+  });
+  lb.addEventListener('click', function () { lb.classList.remove('on'); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') lb.classList.remove('on'); });
+})();
+</script>
+</body>
+</html>
