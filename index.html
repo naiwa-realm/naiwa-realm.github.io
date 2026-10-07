@@ -24,7 +24,7 @@
 html{scroll-behavior:smooth}
 body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,#24513f 0%,var(--bg) 60%) fixed,var(--bg);color:var(--text);font:16px/1.75 var(--body);-webkit-font-smoothing:antialiased}
 a{color:var(--gold)}
-img{max-width:100%;display:block}
+img{max-width:100%;height:auto;display:block}
 .wrap{width:min(1120px,100% - 32px);margin:0 auto}
 
 /* 顶栏 */
@@ -59,7 +59,7 @@ img{max-width:100%;display:block}
 .frogs{position:absolute;inset:0;pointer-events:none;z-index:-1}
 .frogs img{position:absolute;bottom:-10px;filter:drop-shadow(0 12px 18px #0008);animation:bob 4s ease-in-out infinite;opacity:.95}
 @keyframes bob{50%{transform:translateY(-10px)}}
-.shot-hero{margin:44px auto 0;width:min(980px,100%);border-radius:18px;overflow:hidden;border:1px solid var(--line-2);box-shadow:0 30px 80px #000c}
+.shot-hero{margin:44px auto 0;width:min(980px,100%);height:auto;aspect-ratio:16/9;border-radius:18px;overflow:hidden;border:1px solid var(--line-2);box-shadow:0 30px 80px #000c}
 
 /* 区块 */
 section.block{padding:56px 0}
@@ -196,9 +196,9 @@ footer a{color:var(--muted)}
   <h2>四大阵营</h2>
   <p class="intro">同阵营的牌一起打出会触发「联动」，场上的雕塑也算阵营。起始牌是中立的普通奶娃和大笑奶蛙，删掉它们，牌组才会越打越强。</p>
   <div class="factions">
-    <div class="fac" style="--c:var(--egg)"><div class="art"><img src="play/assets/art/chieftain.webp" alt="奶国大力士"></div>
+    <div class="fac" style="--c:var(--egg)"><div class="art"><img src="play/assets/art/egg.webp" alt="奶蛋"></div>
       <h3><i>躺</i>躺平派</h3><p>攒奶蛋、套奶壳、删牌，躺着也能赢。</p><div class="cards">奶蛋守护者 · 慵懒奶蛙 · 奶国大力士 · 奶门的世界</div></div>
-    <div class="fac" style="--c:var(--laugh)"><div class="art"><img src="play/assets/art/rocket.webp" alt="火箭奶蛙"></div>
+    <div class="fac" style="--c:var(--laugh)"><div class="art"><img src="play/assets/art/hold.webp" alt="憋笑"></div>
       <h3><i>绷</i>绷不住团</h3><p>笑到停不下来，奶之力一波打满。</p><div class="cards">火箭奶蛙 · 学园笑匠 · 狂笑 · 憋笑 · 哈家军</div></div>
     <div class="fac" style="--c:var(--iron)"><div class="art"><img src="play/assets/art/nolaugh.webp" alt="我再也不会笑了"></div>
       <h3><i>硬</i>嘴硬帮</h3><p>雕塑、嘲讽与压制，就是不破防。</p><div class="cards">铁甲奶蛙 · 曾经的王 · 我再也不会笑了</div></div>
