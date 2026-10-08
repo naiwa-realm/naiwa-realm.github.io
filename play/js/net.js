@@ -8,7 +8,7 @@
  *   Transport 接口      { send(msg), onMessage(fn), close(), id }
  *     - LoopbackTransport.pair()   同进程两端（测试 / 观战）
  *     - BroadcastTransport(room)   同一浏览器的两个标签页（本地联机测试）
- *     - WebSocketTransport(url)    配合 server/pvp-server.mjs（校验型中继服务器）
+ *     - WebSocketTransport(url)    配合 server/pvp-server.mjs（校验型中继服务器；界面暂不提供，留给以后的公网中转）
  *     - RTCTransport()             WebRTC 点对点直连，交换两次连接码即可，不需要游戏服务器
  *   LockstepLink        把 Session 与 Transport 接起来：开局握手、动作广播、校验和比对、表情、认输。
  *
@@ -172,9 +172,31 @@
     const ds = new DecompressionStream('deflate-raw');
     return JSON.parse(await new Response(new Blob([bytes]).stream().pipeThrough(ds)).text());
   }
+  /**
+   * 虚拟局域网（Radmin VPN 等）直连：浏览器出于隐私会把本机地址换成 xxx.local，对方无法据此连接。
+   * 玩家手动填自己的虚拟地址（如 26.x.x.x），这里给每个本机 UDP 端口各补一条「该地址 + 端口」的候选。
+   * 浏览器为每块网卡单独开端口，其中属于虚拟网卡的那一条能连通，其余的对方试一下就放弃。
+   * 原有的候选（同一局域网 / STUN 打洞）全部保留，所以填了地址也不影响普通直连。
+   */
+  const IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+  function addVirtualCandidates(sdp, ip) {
+    if (!ip || !IPV4.test(ip)) return sdp;
+    const out = [], seen = new Set(); let k = 0;
+    for (const line of sdp.split(/\r?\n/)) {
+      if (line === '') continue;
+      out.push(line);
+      const m = /^a=candidate:\S+ (\d+) udp \d+ \S+ (\d+) typ host/i.exec(line);
+      if (m && !seen.has(m[1] + ':' + m[2])) {
+        seen.add(m[1] + ':' + m[2]);
+        out.push(`a=candidate:26${k++}0 ${m[1]} udp 2113937151 ${ip} ${m[2]} typ host generation 0`);
+      }
+    }
+    return out.join('\r\n') + '\r\n';
+  }
   class RTCTransport {
     constructor(opts = {}) {
       this.id = 'rtc' + Math.random().toString(36).slice(2, 8); this.handlers = []; this.buffer = []; this.ch = null;
+      this.virtualIp = (opts.virtualIp || '').trim();
       this.onState = opts.onState || (() => {});
       this.pc = new RTCPeerConnection({ iceServers: opts.iceServers || ICE_SERVERS });
       this.pc.onconnectionstatechange = () => {
@@ -201,7 +223,7 @@
       this.bind(this.pc.createDataChannel('naiwa', { ordered: true }));
       await this.pc.setLocalDescription(await this.pc.createOffer());
       await this.gathered();
-      return packCode({ k: 'offer', sdp: this.pc.localDescription.sdp });
+      return packCode({ k: 'offer', sdp: addVirtualCandidates(this.pc.localDescription.sdp, this.virtualIp) });
     }
     /** 客人：粘贴邀请码，生成回应码 */
     async acceptOffer(code) {
@@ -209,7 +231,7 @@
       await this.pc.setRemoteDescription({ type: 'offer', sdp: o.sdp });
       await this.pc.setLocalDescription(await this.pc.createAnswer());
       await this.gathered();
-      return packCode({ k: 'answer', sdp: this.pc.localDescription.sdp });
+      return packCode({ k: 'answer', sdp: addVirtualCandidates(this.pc.localDescription.sdp, this.virtualIp) });
     }
     /** 房主：粘贴回应码，完成连接 */
     async acceptAnswer(code) {
@@ -295,6 +317,6 @@
 
   function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  NW.Net = { PROTOCOL, Session, HumanController, AIController, RemoteController, LoopbackTransport, BroadcastTransport, WebSocketTransport, RTCTransport, LockstepLink, packCode, unpackCode, wait };
+  NW.Net = { PROTOCOL, Session, HumanController, AIController, RemoteController, LoopbackTransport, BroadcastTransport, WebSocketTransport, RTCTransport, LockstepLink, packCode, unpackCode, addVirtualCandidates, IPV4, wait };
   if (typeof module !== 'undefined' && module.exports) module.exports = NW;
 })(typeof window !== 'undefined' ? window : globalThis);

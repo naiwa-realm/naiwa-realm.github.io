@@ -13,7 +13,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;background:#0b1c17;font-family:var(--text);color:#f6efd8;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;touch-action:pan-x pan-y;background:#0b1c17;font-family:var(--text);color:#f6efd8;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 button:disabled{cursor:not-allowed}
 img{-webkit-user-drag:none;user-select:none}
@@ -700,9 +700,10 @@ img{-webkit-user-drag:none;user-select:none}
   -webkit-mask:radial-gradient(circle,#000 20%,transparent 66%);mask:radial-gradient(circle,#000 20%,transparent 66%);animation:auraSpin 9s linear infinite}
 .shelf-fig.elite img{position:relative;filter:drop-shadow(0 0 6px #ffd54a) drop-shadow(0 6px 5px #000b)}
 .shelf-fig.elite.current img{filter:drop-shadow(0 0 12px #fff2a8) drop-shadow(0 6px 5px #000b)}
-.shelf-fig.locked .aura{opacity:.35;filter:grayscale(.6)}
+.shelf-fig.locked .aura{display:none}
+.shelf-fig.elite.locked img{filter:brightness(0) opacity(.55) drop-shadow(0 0 1px #ffd77255)}
 @keyframes auraSpin{to{transform:rotate(360deg)}}
-.level-node.elite .lp{box-shadow:0 0 0 2px #ffe58a,0 0 12px 3px #ffc83d}
+.level-node.elite:not(:disabled) .lp{box-shadow:0 0 0 2px #ffe58a,0 0 12px 3px #ffc83d}
 @media (prefers-reduced-motion: reduce){.shelf-fig .aura:before{animation:none}}
 .hero.elite .portrait{box-shadow:0 0 0 3px #ffe58a,0 0 26px 8px #ffc83dcc,0 10px 18px #000a}
 
@@ -731,3 +732,27 @@ img{-webkit-user-drag:none;user-select:none}
 .pk-report li{font-size:12.5px!important;line-height:1.6!important}
 .pk-report ul.warn li{color:#d8c992!important}
 #svBox textarea{width:100%;box-sizing:border-box;font:12px/1.5 ui-monospace,monospace;background:#0a1a15;color:#dfe5d2;border:1px solid #e6d18e44;border-radius:10px;padding:8px}
+
+/* ---------- v8.4 删牌区 ---------- */
+.pile.trash .face{filter:grayscale(.75) brightness(.72)}
+.pile.trash .empty{border-color:#ff8a6a44;background:#2a0f0a55;display:grid;place-items:center}
+.pile.trash .empty em,.pile.trash .stamp{font:400 26px/1 var(--display);font-style:normal;color:#ff9a7a66}
+.pile.trash .stamp{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-14deg);color:#ff6a4acc;border:2px solid #ff6a4acc;border-radius:8px;padding:2px 6px;font-size:22px;background:#1a0a0699;z-index:2;pointer-events:none}
+.pile.trash .n{border-color:#ff8a6a}
+.pile.trash.corner{position:absolute;right:44px;bottom:40px}
+#viewport.has-rail .pile.trash.corner{right:34px}
+/* 长卡名：缩小字号，保证落在名称条里 */
+.card .c-name.n7{font-size:calc(var(--u) * 1.2);letter-spacing:-.02em;padding:0 calc(var(--u) * .2)}
+.card .c-name.n9{font-size:calc(var(--u) * 1.02);letter-spacing:-.04em;padding:0 calc(var(--u) * .15);white-space:nowrap}
+.play-cards .card .c-name.n7{font-size:calc(var(--u) * 1.35)}
+.play-cards .card .c-name.n9{font-size:calc(var(--u) * 1.12)}
+.statue-slot .card .c-name.n7,.statue-slot .card .c-name.n9{font-size:11px}
+
+/* 联机方式：分段按钮（代替原生下拉框，避免缩放后下拉菜单尺寸失真） */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg-b{font:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:10px;border:1px solid #e6d18e44;background:#0b211b;color:#cfd6be;cursor:pointer}
+.seg-b b{font-size:14px;color:#f6efd8}.seg-b small{font-size:10.5px;opacity:.75}
+.seg-b:hover{border-color:#e6d18e99}
+.seg-b.on{border-color:#ffe9a6;background:linear-gradient(#3a5a2c,#1f3a1c);box-shadow:0 0 0 1px #ffe9a6 inset}
+.seg-b.on b{color:#ffe9a6}
+#viewport.touch .seg-b b{font-size:19px}#viewport.touch .seg-b small{font-size:13px}

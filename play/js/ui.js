@@ -15,7 +15,7 @@
     egg: { h: '88%' }, baby: { h: '94%' }, laugh: { h: '100%', b: '0%' }, kungfu: { h: '92%' }, frenzy: { h: '100%', b: '0%' }, hold: { h: '100%', b: '0%' },
     sigma: { h: '97%', b: '0%' }, sleeper: { h: '100%', b: '0%' }, scholar: { h: '102%', b: '0%' }, cat: { h: '82%' }, king: { h: '102%', b: '0%' },
     rocket: { h: '94%', b: '2%' }, chieftain: { h: '98%', b: '0%' }, guard: { photo: '58% 18%' }, angel: { h: '96%', b: '0%' },
-    gate: { photo: '50% 30%' }, army: { photo: '42% 40%' }, nolaugh: { h: '100%', b: '0%' }, disdain: { h: '100%', b: '0%', x: '8%' },
+    gate: { photo: '50% 30%' }, army: { photo: '42% 40%' }, denial: { photo: '40% 26%' }, nolaugh: { h: '100%', b: '0%' }, disdain: { h: '100%', b: '0%', x: '8%' },
   };
   // 单文件打包时 NW.ART_DATA 内联为 data URI；否则走 assets/art/ 目录
   const artSrc = (key, photo) => { const f = `${key}${photo ? '_photo' : ''}.webp`; return (NW.ART_DATA && NW.ART_DATA[f]) || `assets/art/${f}`; };
@@ -48,8 +48,8 @@
       ${c.cost ? `<div class="c-cost">${c.cost}</div>` : ''}
       ${c.faction !== 'neutral' ? `<div class="c-fac" title="${f.name}">${f.short}</div>` : ''}
       ${c.taunt ? '<div class="c-taunt">嘲讽</div>' : ''}
-      <div class="c-name">${esc(c.name)}</div>
-      <div class="c-type">${TYPES[c.type]}${c.kind ? '·' + NW.STATUS_KINDS[c.kind].name : ''}${c.faction !== 'neutral' ? ' · ' + f.name : ''}</div>
+      <div class="c-name${c.name.length >= 9 ? ' n9' : c.name.length >= 7 ? ' n7' : ''}">${esc(c.name)}</div>
+      <div class="c-type">${TYPES[c.type]}${c.kind ? '·' + NW.STATUS_KINDS[c.kind].name : ''}${c.alsoChar ? ' / ' + TYPES.char : ''}${c.faction !== 'neutral' ? ' · ' + f.name : ''}</div>
       <div class="c-text">${rows.join('')}</div>
       ${c.type === 'statue' ? `<div class="c-hp">${c.hp}</div>` : ''}
       <div class="c-badges">${badges.join('')}</div>
@@ -372,18 +372,20 @@
 
   function pileHTML(seat, kind) {
     const s = UI.view.seats[seat];
-    const n = kind === 'deck' ? s.deckCount : s.discard.length;
+    const n = kind === 'deck' ? s.deckCount : kind === 'trash' ? (s.trash || []).length : s.discard.length;
     let inner;
-    if (!n) inner = '<div class="empty"></div>';
+    if (!n) inner = kind === 'trash' ? '<div class="empty"><em>删</em></div>' : '<div class="empty"></div>';
+    else if (kind === 'trash') { const top = s.trash[s.trash.length - 1]; inner = `<div class="stack">${n > 1 ? '<i class="back" style="transform:translate(2px,2px)"></i>' : ''}</div><div class="face">${cardHTML(UI.view.cards[top])}</div><em class="stamp">删</em>`; }
     else if (kind === 'deck') inner = `<div class="stack">${Array.from({ length: Math.min(5, Math.ceil(n / 3)) }, (_, i) => `<i class="back" style="transform:translate(${-i * 1.5}px,${-i * 2}px)"></i>`).join('')}</div>`;
     else { const top = s.discard[s.discard.length - 1]; inner = `<div class="stack">${n > 1 ? '<i class="back" style="transform:translate(2px,2px)"></i>' : ''}</div><div class="face">${cardHTML(UI.view.cards[top])}</div>`; }
-    return `${inner}<span class="n">${n}</span><span class="lbl">${kind === 'deck' ? '牌库' : '弃牌'}</span>`;
+    return `${inner}<span class="n">${n}</span><span class="lbl">${kind === 'deck' ? '牌库' : kind === 'trash' ? '删牌区' : '弃牌'}</span>`;
   }
   function renderPiles(v) {
     for (const [pos, seat] of [['me', UI.viewer], ['op', 1 - UI.viewer]]) {
-      for (const kind of ['deck', 'discard']) {
-        const p = $(`#${kind}-${pos}`); const s = v.seats[seat];
-        const sig = kind + (kind === 'deck' ? s.deckCount : s.discard.length + ':' + s.discard[s.discard.length - 1]);
+      for (const kind of ['deck', 'discard', 'trash']) {
+        const p = $(`#${kind}-${pos}`); const s = v.seats[seat]; if (!p) continue;
+        const tr = s.trash || [];
+        const sig = kind + (kind === 'deck' ? s.deckCount : kind === 'trash' ? tr.length + ':' + tr[tr.length - 1] : s.discard.length + ':' + s.discard[s.discard.length - 1]);
         if (p.dataset.sig !== sig) { p.innerHTML = pileHTML(seat, kind); p.dataset.sig = sig; }
       }
     }
@@ -423,6 +425,7 @@
     const extra = [];
     if (opts.some(u => zones[u] === 'discard')) extra.push('<button class="btn ghost" data-act="pick" data-zone="discard">从弃牌堆选</button>');
     if (opts.some(u => zones[u] === 'deck')) extra.push('<button class="btn ghost" data-act="pick" data-zone="deck">从抽牌堆选</button>');
+    if (opts.some(u => zones[u] === 'trash')) extra.push('<button class="btn ghost" data-act="pick" data-zone="trash">从删牌区选</button>');
     if (pd.optional) extra.push('<button class="btn ghost" data-act="skip">跳过</button>');
     box.className = 'pending on';
     box.innerHTML = `<span>${esc(pd.prompt)}</span>${extra.join('')}`;
@@ -544,6 +547,7 @@
   const anchors = () => ({
     deck: [FX.rect($('#deck-' + (UI.viewer === 0 ? 'me' : 'op'))), FX.rect($('#deck-' + (UI.viewer === 1 ? 'me' : 'op')))],
     discard: [FX.rect($('#discard-' + (UI.viewer === 0 ? 'me' : 'op'))), FX.rect($('#discard-' + (UI.viewer === 1 ? 'me' : 'op')))],
+    trash: [FX.rect($('#trash-' + (UI.viewer === 0 ? 'me' : 'op'))), FX.rect($('#trash-' + (UI.viewer === 1 ? 'me' : 'op')))],
     hero: [FX.rect($('#hero-' + (UI.viewer === 0 ? 'me' : 'op')).querySelector('.portrait')), FX.rect($('#hero-' + (UI.viewer === 1 ? 'me' : 'op')).querySelector('.portrait'))],
     oppHand: FX.rect($('#oppHand')), supply: FX.rect($('#supply')), errand: FX.rect($('#errandSlot')),
     orb: { coin: FX.rect($('#orb-coin')), energy: FX.rect($('#orb-energy')), power: FX.rect($('#orb-power')) },
@@ -561,6 +565,9 @@
     const byType = t => events.filter(e => e.t === t);
     const drawn = new Set([].concat(...byType('draw').map(e => e.uids)));
     const unlimbo = new Set(byType('unlimbo').map(e => e.uid));
+    const recalled = new Set(byType('recall').filter(e => e.to === 'hand').map(e => e.uid));
+    // 卡牌语音：哈家军、奶蛋守护者打出时（双方都会响）
+    for (const p of byType('play')) { const c = CARDS[v.cards[p.uid]]; if (c && c.voice) { FX.voice(c.voice); break; } }
     const oppPlays = byType('play').filter(e => !isMine(e.seat) || (UI.mode !== 'hotseat' && !UI.isHuman(e.seat)));
     const showPlays = byType('play').filter(e => CARDS[v.cards[e.uid]] && CARDS[v.cards[e.uid]].fullArt && e.to === 'play');
     let drawIdx = 0, spot = null;
@@ -581,6 +588,7 @@
       let from = null, dur = 460, delay = 0, flipY = true;
       if (inHand && drawn.has(uid)) { from = A.deck[UI.viewer]; delay = 70 * drawIdx++; }
       else if (inHand && unlimbo.has(uid)) { from = FX.rect($('#limbo')); flipY = false; }
+      else if (inHand && recalled.has(uid)) { from = A.trash[UI.viewer]; flipY = false; dur = 620; FX.sparkle(last.cx, last.cy); }
       else if (inMarket) { from = A.supply; dur = 520; delay = 180; }
       else if (inStatue) { from = { cx: last.cx, cy: last.cy - 80, w: last.w * .6, h: last.h * .6 }; flipY = false; FX.sparkle(last.cx, last.cy); }
       else if (inHand) { from = A.deck[UI.viewer]; }
@@ -599,7 +607,7 @@
       const cleanup = events.find(e => e.t === 'cleanup' && e.uids.includes(uid));
       const disc = events.find(e => (e.t === 'discard' || e.t === 'statueReplaced') && e.uid === uid);
       if (buy) anims.push(FX.flyGhost(f.el, f.rect, buy.to === 'deck' ? A.deck[buy.seat] : A.discard[buy.seat], { lift: 60, dur: 620 }));
-      else if (trash) anims.push(FX.burn(f.el, f.rect));
+      else if (trash) anims.push(FX.flyGhost(f.el, f.rect, A.trash[trash.seat], { lift: 40, dur: 620 }).then(() => { const r = A.trash[trash.seat]; if (r) FX.burst(r.cx, r.cy, { n: 12, speed: 120, size: 6, color: ['#ff9a3c', '#ffcf5a'], gravity: -200, life: 600 }); }));
       else if (broke) { /* 由事件特效处理碎裂 */ UI._broken = UI._broken || {}; UI._broken[uid] = f; }
       else if (churn) anims.push(FX.flyGhost(f.el, f.rect, { cx: f.rect.cx, cy: f.rect.cy - 120, w: f.rect.w, h: f.rect.h }, { dur: 700 }));
       else if (cleanup) anims.push(FX.flyGhost(f.el, f.rect, A.discard[cleanup.seat], { dur: 520, delay: 50 * cleanIdx++ }));
@@ -713,6 +721,7 @@
         case 'gain': {
           const from = srcRect(ev.src, ev.seat), to = resTarget(ev.seat, ev.res);
           if (from) FX.float(from.cx, from.y + 16, `+${ev.n}${RES_ICON[ev.res]}`, RES_CLS[ev.res]);
+          if (ev.phase === 'shield') FX.float(from.cx, from.y - 14, '奶壳变奶蛋', 'txt');
           FX.sfx(ev.res === 'coin' ? 'coin' : ev.res);
           const p = FX.orb({ x: from.cx, y: from.cy }, { x: to.cx, y: to.cy }, RES_COLOR[ev.res], { dur: 480 }).then(() => bumpRes(ev.seat, ev.res, ev.n));
           pendingOrbs.push(p); await FX.wait(130); break;
@@ -795,6 +804,24 @@
         case 'curse': { const r = A.hero[ev.seat]; FX.float(r.cx, r.y - 10, `下回合弃 ${ev.n} 张`, 'txt'); break; }
         case 'topdeck': if (isMine(ev.seat)) FX.toast('本回合下一张购入的牌将置于牌库顶'); break;
         case 'scrap': FX.sfx('scrap'); await FX.wait(250); break;
+        case 'trashPurge': {
+          const r = A.trash[ev.seat];
+          if (r && ev.ids && ev.ids.length) {
+            const tmp = document.createElement('div'); tmp.innerHTML = cardHTML(ev.ids[ev.ids.length - 1]);
+            FX.burn(tmp.firstElementChild, r); FX.float(r.cx, r.y - 6, `永久删除 ${ev.ids.length} 张`, 'txt');
+          }
+          break;
+        }
+        case 'recall': {
+          const r = A.trash[ev.seat]; FX.sfx('ally'); FX.float(r.cx, r.y - 6, '取回！', 'txt');
+          // 去弃牌堆 / 牌库顶，或者对手取回到手牌：画一张牌从删牌区飞过去
+          if (ev.to !== 'hand' || !isMine(ev.seat)) {
+            const tmp = document.createElement('div'); tmp.innerHTML = cardHTML(v.cards[ev.uid]); const el = tmp.firstElementChild;
+            const to = ev.to === 'hand' ? A.oppHand : ev.to === 'top' ? A.deck[ev.seat] : A.discard[ev.seat];
+            await FX.flyGhost(el, r, to, { lift: 50, dur: 640, fade: false });
+          }
+          break;
+        }
         case 'trashOp': if (isMine(ev.seat)) { const r = FX.rect($('#trashOps')) ; const from = srcRect(ev.src, ev.seat); FX.float(from.cx, from.y, '+1 删牌机会', 'txt'); FX.sfx('ally'); } break;
         case 'trash': if (ev.from !== 'limbo') FX.sfx('scrap'); break;
         case 'statueSummon': FX.sfx('ally'); break;
@@ -865,7 +892,7 @@
     const pd = UI.view.pending; if (!pd || !pd.options) return;
     const zones = pd.options.map(u => pd.zones[u]);
     // 只有非手牌选项时（或选项全在抽牌堆/弃牌堆），自动打开选择器
-    if (pd.kind !== 'destroyStatue' && !zones.includes('hand') && pd.options.length) NW.Screens.picker(UI, zones.includes('deck') ? 'deck' : 'discard');
+    if (pd.kind !== 'destroyStatue' && !zones.includes('hand') && pd.options.length) NW.Screens.picker(UI, zones.includes('trash') ? 'trash' : zones.includes('deck') ? 'deck' : 'discard');
   };
 
   function bind() {
@@ -895,6 +922,8 @@
       if (t.closest('#deck-me')) { if (myTurn() && UI.disp[UI.viewer].energy > 0) return UI.submit({ type: 'drawExtra' }); return NW.Screens.pileViewer(UI, 'deck'); }
       if (t.closest('#discard-me')) return NW.Screens.pileViewer(UI, 'discard');
       if (t.closest('#discard-op')) return NW.Screens.pileViewer(UI, 'oppDiscard');
+      if (t.closest('#trash-me')) { const pd = UI.view.pending; if (pd && pd.seat === UI.viewer && pd.kind === 'recall') return NW.Screens.picker(UI, 'trash'); return NW.Screens.pileViewer(UI, 'trash'); }
+      if (t.closest('#trash-op')) return NW.Screens.pileViewer(UI, 'oppTrash');
       if (t.closest('#deck-op')) return FX.toast(`对手牌库剩余 ${op().deckCount} 张`);
       if (t.closest('#orb-energy') && myTurn() && UI.disp[UI.viewer].energy > 0) return UI.submit({ type: 'drawExtra' });
       if (t.closest('#orb-power') && myTurn() && UI.disp[UI.viewer].power > 0) return FX.toast('按住奶之力拖到目标上，或直接点击对手头像 / 雕塑');
@@ -1091,7 +1120,9 @@
 
   /* 舞台缩放；触屏 / 小屏时进入触控模式：大按钮放到舞台旁的侧栏（真实像素大小），点牌弹出大卡面 */
   UI.fitStage = function () {
-    const W = window.innerWidth, H = window.innerHeight, vp = $('#viewport');
+    // 用布局视口的尺寸：手机双指放大后 innerWidth/innerHeight 变成「放大后看到的那一块」，按它算会把牌桌缩到角落
+    const de = document.documentElement, vp = $('#viewport');
+    const W = de.clientWidth || window.innerWidth, H = de.clientHeight || window.innerHeight;
     let k = Math.min(W / 1600, H / 900);
     const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
     const touch = coarse || k < 0.6;

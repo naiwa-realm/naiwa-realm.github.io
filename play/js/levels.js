@@ -173,7 +173,7 @@
       tutorial: [
         { target: '#statues-op .card', text: '对手场上有一座雕塑「奶狗」。雕塑会一直留在场上，每回合给主人好处；盾牌里的数字是它的耐久（本关石像风化，耐久 -2）。', next: true },
         { target: '#hero-op', text: '奶狗带「嘲讽」：只要它在场，你就不能攻击对手本体，必须先击碎它。', next: true },
-        { target: '#hand .card[data-id="goat"]', text: '你也有一座雕塑「奶羊」。打出它，它会留在你这边，从你下回合开始每回合给你 1 奶蛋和 2 奶壳。', done: c => c.ev('play', e => e.to === 'statue') },
+        { target: '#hand .card[data-id="goat"]', text: '你也有一座雕塑「奶羊」。打出它，它会留在你这边，从你下回合开始每回合给你 1 奶蛋；它还带嘲讽，对手要先拆掉它才能打你。', done: c => c.ev('play', e => e.to === 'statue') },
         { target: '#statues-me', text: '奶壳会挡住对手打到你本体的伤害，挡到你下回合开始为止。你最多能同时拥有 3 座雕塑。', next: true },
         { target: '#btnAll', text: '把剩下的牌都打出去。', done: c => !(c.me.hand || []).length },
         { target: '#statues-op .card', text: '你有 4 点奶之力，正好等于奶狗的耐久。把奶之力拖到奶狗身上（或直接点击它）击碎它。击碎雕塑必须一次付出等于耐久的奶之力。', done: c => c.ev('statueBroken', e => e.by === c.seat) },
@@ -191,7 +191,7 @@
 
     { id: '2-1', chapter: 2, title: '灵雾秘仪', subtitle: '市场流转',
       story: [{ who: '西格玛导师', art: 'cat', text: '雾会带走你犹豫的那张牌。喵。' }],
-      tip: '「灵雾」每回合会换掉市场最右侧的牌，看中了就早点买。用飞天奶蛙和西格奶精简牌库。',
+      tip: '「灵雾」每回合会换掉市场最右侧的牌，看中了就早点买。用奶蛋守护者、奶门的世界和西格奶精简牌库。',
       enemy: { name: '西格玛导师', portrait: 'cat', hp: 26, extraCards: ['angel'], ai: { base: 'easy', randomness: 1.2, buyChance: 0.85, useEnergy: 0.8, bias: { angel: 1.8, sigma: 1.8, cat: 1.6, rabbit: 1.6, snake: 1.5, rat: 1.4 } } },
       mutators: [{ id: 'marketChurn', seat: null }, { id: 'regen', seat: 1, params: { n: 1 } }],
       objective: { type: 'defeat' },
@@ -258,7 +258,7 @@
       stars: [{ type: 'win', label: '获胜' }, { type: 'extraDraws', n: 15, label: '累计用奶劲多抽 15 次' }, { type: 'turnPlays', n: 9, label: '一回合内打出 9 张牌' }] },
     { id: 'W5', chapter: 4, title: '老兵不死', subtitle: '耄耋老兵 · 冲锋号',
       story: [{ who: '耄耋老兵', art: 'md_vet', text: '（头盔擦得锃亮）喵——！（吹响了冲锋号）' }, { who: '教官奶蛙', art: 'coach', text: '它守得更死了。趁这一仗，把起始的普通奶娃和大笑奶蛙全部删掉，牌组才算练成。' }],
-      tip: '老兵开局摆了 3 个训练假人（耐久 3 的嘲讽雕塑），每 3 回合冲锋一次（+5 奶之力）。三星要求删光 7 张普通奶娃和 2 张大笑奶蛙：精英招募、奶蛋守护者、飞天奶蛙、西格奶、奶门的世界都能给删牌机会。',
+      tip: '老兵开局摆了 3 个训练假人（耐久 3 的嘲讽雕塑），每 3 回合冲锋一次（+5 奶之力）。三星要求删光 7 张普通奶娃和 2 张大笑奶蛙：精英招募、奶蛋守护者、西格奶、奶门的世界都能给删牌机会。',
       enemy: { name: '耄耋老兵', portrait: 'md_vet', hp: 20, statues: ['dummy', 'dummy', 'dummy'], ai: { base: 'easy', randomness: 0.8, buyChance: 0.9, useEnergy: 0.8, bias: { dog: 2, ox: 2, guard: 1.6, king: 1.5, horse: 1.4 } } },
       rules: { pool: pool(null, { gate: 2, rich: 2, angel: 1, sigma: 1 }) },
       mutators: [{ id: 'royalDecree', seat: 1, params: { every: 3, n: 5 } }],
@@ -288,6 +288,41 @@
       objective: { type: 'defeat' },
       stars: [{ type: 'win', label: '获胜' }, { type: 'purge', ids: ['baby', 'laugh', 'kungfu'], label: '删光全部起始牌' }, { type: 'bigHit', n: 14, label: '单次攻击打掉 14 点生命' }] },
   ];
+
+  /* v8.5 难度下调：v8.4.1 重新训练 AI 后，以「标准」AI 代打为玩家重新校准（tools/calibrate_levels2.js、tools/level_patch_eval.js）。
+   * 目标胜率：第一部 98% → 暗影国王 55%，第二部 90% → 耄耋耄耋 50%。主要手段：敌方 AI 降档、生命下调、削弱敌方增益规则；每关的招牌机制都保留。
+   * null 表示去掉该规则。 */
+  const DIFFICULTY_V85 = {"1-4": {"hp": 18}, "2-1": {"hp": 18, "mut": {"regen": null}}, "2-2": {"hp": 27, "objective": {"n": 2}}, "2-3": {"objective": {"rounds": 8}}, "3-1": {"ai": {"base": "easy"}, "hp": 30, "mut": {"royalDecree": {"n": 4}, "heroShield": {"max": 11}}}, "3-2": {"hp": 32, "mut": {"phaseShift": {"at": 16, "heal": 3}, "bonusRes": {"every": 2}, "regen": null}, "ai": {"base": "easy"}}, "W1": {"hp": 17}, "W2": {"ai": {"base": "easy"}, "hp": 34}, "W3": {"hp": 18, "mut": {"flowers": {"every": 4}}}, "W4": {"ai": {"base": "easy"}, "hp": 28}, "W5": {"hp": 14, "mut": {"royalDecree": {"n": 3}}}, "W6": {"hp": 20, "mut": {"tax": null}}, "W7": {"hp": 27, "mut": {"heroShield": {"max": 13}, "bonusRes": {"every": 2}, "regen": null}}, "W8": {"ai": {"base": "easy"}, "hp": 25, "mut": {"phaseShift": {"at": 15, "heal": 4}, "flowers": {"every": 4}}}};
+  for (const lv of LEVELS) {
+    const d = DIFFICULTY_V85[lv.id]; if (!d) continue;
+    if (d.hp) lv.enemy.hp = d.hp;
+    if (d.ai) lv.enemy.ai = Object.assign({}, lv.enemy.ai, d.ai);
+    if (d.objective) lv.objective = Object.assign({}, lv.objective, d.objective);
+    for (const [id, v] of Object.entries(d.mut || {})) {
+      const i = (lv.mutators || []).findIndex(m => m.id === id && (m.seat === 1 || m.seat == null || id === 'tax'));
+      if (i < 0) continue;
+      if (v === null) lv.mutators.splice(i, 1); else lv.mutators[i] = Object.assign({}, lv.mutators[i], { params: Object.assign({}, lv.mutators[i].params, v) });
+    }
+  }
+
+  // 难度调整后的说明文字（与上面的数值一致）
+  const TEXT_V85 = {
+    '2-2': { tip: '本关目标：累计击碎 2 座敌方雕塑，不需要打败将军本人。嘴硬帮的曾经的王可以献祭直接击碎一座。' },
+    '2-3': { tip: '本关目标：撑过 8 回合。奶猪群每回合额外获得 1 奶之力。躺平派的奶壳（本关躺平派牌便宜 1 奶蛋）和嘴硬帮的嘲讽雕塑会很有用。', stars: { 0: '撑过 8 回合' } },
+    '3-1': { tip: '「王令」每 3 回合让他获得 4 奶之力；「奶壳护体」让单次伤害最多 11 点，攻击本体会用掉全部奶之力，所以超过 11 的部分先拿去拆他的雕塑。' },
+    '3-2': { tip: '两阶段 BOSS：每 2 回合额外获得 1 奶之力，生命降到 16 以下会唤醒奶龙、回复 3 生命并每回合再 +3 奶之力。第二阶段前先把牌库练好，留好嘲讽雕塑或奶壳。' },
+    'W3': { tip: '开局你的弃牌堆里有 1 束花，之后每 4 回合再塞 1 束。奶门的世界、奶蛋守护者、西格奶都能帮你删牌；本关市场里删牌牌更多。' },
+    'W5': { tip: '老兵开局摆了 3 个训练假人（耐久 3 的嘲讽雕塑），每 3 回合冲锋一次（+3 奶之力）。三星要求删光 7 张普通奶娃和 2 张大笑奶蛙：精英招募、奶蛋守护者、西格奶、奶门的世界都能给删牌机会。' },
+    'W6': { subtitle: '耄耋特派员 · 花束攻势', tip: '特派员每 3 回合塞 1 束花。少买精买，把花全部删掉。' },
+    'W7': { tip: '橙耄单次最多受到 13 点伤害，每 2 回合额外获得 1 奶之力。多攻击几次：打出一部分牌就先打一下本体，再出牌再打。' },
+    'W8': { tip: '两阶段 BOSS：每回合 +1 奶之力和 2 奶壳，每 4 回合送 1 束花；生命降到 15 以下回复 4 生命、唤醒奶虎，之后每回合再 +2 奶之力。' },
+  };
+  for (const lv of LEVELS) {
+    const t = TEXT_V85[lv.id]; if (!t) continue;
+    if (t.tip) lv.tip = t.tip;
+    if (t.subtitle) lv.subtitle = t.subtitle;
+    for (const [i, label] of Object.entries(t.stars || {})) lv.stars[i] = Object.assign({}, lv.stars[i], { label });
+  }
 
   /* ---------------- 关卡 → 对局参数 ---------------- */
   function aiProfile(spec) {

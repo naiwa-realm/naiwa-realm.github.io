@@ -17,6 +17,9 @@
  *   {if:条件, then:[...], else:[...]}    条件：hasStatue / otherStatue / hasEnergy / charsInHand2
  *   {once:key, then:[...]}               每回合限一次
  *   {pierce:true}                        破壳：本回合你的攻击无视对手奶壳
+ *   {recall:{to, maxCost}}               从自己本回合的删牌区取回 1 张牌（to: discard 弃牌堆（默认）/ top 牌库顶；maxCost 费用上限，可选）
+ *
+ * 删牌区：每位玩家桌边常驻的公开区域，放本回合删掉、献祭的牌；回合结束时清空，里面的牌永久移出游戏。
  *
  * 状态牌体系（type:'status'，kind 决定持续方式）：
  *   buff   增益：本回合有效，强化之后打出的牌 → 先打状态再打角色
@@ -70,15 +73,18 @@
     text: { play: '+2{c}', scrap: '+2{p}' }, flavor: '随叫随到。跑不动了就冲上前线。' });
 
   /* ---------- 躺平派：经济与回复 ---------- */
-  def('rich', { name: '奶蛋守护者', type: 'char', faction: 'egg', cost: 2, art: 'egg',
-    play: [{ gain: 'coin', n: 2 }], ally: [{ trash: { from: ['hand', 'discard'], optional: true } }],
-    text: { play: '+2{c}', ally: '获得 1 次删牌机会' }, flavor: '圆滚滚的身体里装着整个奶国的积蓄。' });
+  def('rich', { name: '奶蛋守护者', type: 'char', faction: 'egg', cost: 2, art: 'egg', voice: 'egg',
+    play: [{ shield: 3 }, { shieldBank: true }], ally: [{ trash: { from: ['hand', 'discard'], optional: true } }],
+    text: { play: '+3{s}。对手回合结束后没用掉的{s}，在你下回合开始时变成等量{c}', ally: '获得 1 次删牌机会' }, flavor: '圆滚滚的身体里装着整个奶国的积蓄。' });
   def('sleeper', { name: '灰心奶蛙', type: 'char', faction: 'egg', cost: 3, art: 'sleeper',
     play: [{ gain: 'coin', n: 2 }, { if: 'hasStatue', then: [{ draw: 1 }] }], ally: [{ gain: 'coin', n: 1 }, { shield: 4 }],
     text: { play: '+2{c}。若你有雕塑，抽 1 张', ally: '+1{c} +4{s}' }, flavor: '数了一遍奶蛋，叹了口气，又数了一遍。' });
   def('gate', { name: '奶门的世界', type: 'status', kind: 'buff', faction: 'egg', cost: 3, art: 'gate', artMode: 'photo', fullArt: true,
     play: [{ gain: 'coin', n: 1 }, { trash: { from: ['hand', 'discard'] } }], ally: [{ trash: { from: ['hand', 'discard'] } }], passive: 'gate',
     text: { play: '+1{c}，获得 1 次删牌机会。本回合每删 1 张自己的牌 +1{c}', ally: '获得 1 次删牌机会' }, flavor: '推开这扇门，牌库就轻了。' });
+  def('thinker', { name: '思考奶蛙', type: 'char', faction: 'egg', cost: 2, art: 'thinker',
+    play: [{ gain: 'coin', n: 2 }, { recall: { to: 'discard', maxCost: 4 } }], ally: [{ shield: 3 }],
+    text: { play: '+2{c}。从本回合删牌区取回 1 张费用 ≤ 4 的牌放回弃牌堆', ally: '+3{s}' }, flavor: '想了想，删掉的那张……好像还能用。' });
   def('chieftain', { name: '奶国大力士', type: 'char', faction: 'egg', cost: 5, art: 'chieftain',
     play: [{ gain: 'coin', n: 2 }, { gain: 'power', n: 2 }], ally: [{ topdeckNext: true }],
     text: { play: '+2{c} +2{p}', ally: '本回合下一张购入的牌置于牌库顶' }, flavor: '叉腰站着，就是一种威慑。' });
@@ -90,7 +96,7 @@
   def('scholar', { name: '学园笑匠', type: 'char', faction: 'laugh', cost: 4, art: 'scholar',
     play: [{ gain: 'power', n: 2 }, { if: 'hasEnergy', then: [{ gain: 'coin', n: 1 }] }], ally: [{ gain: 'energy', n: 1 }],
     text: { play: '+2{p}。若你有{e}，+1{c}', ally: '+1{e}' }, flavor: '课堂笑话考试必考。' });
-  def('army', { name: '哈家军', type: 'status', kind: 'buff', faction: 'laugh', cost: 5, art: 'army', artMode: 'photo', fullArt: true,
+  def('army', { name: '哈家军', type: 'status', kind: 'buff', faction: 'laugh', cost: 6, art: 'army', voice: 'laugh', artMode: 'photo', fullArt: true,
     play: [{ gain: 'power', n: 1 }], ally: [{ pierce: true }], passive: 'army',
     text: { play: '+1{p}。本回合你每打出一张角色牌 +1{p}', ally: '破壳：本回合攻击无视奶壳' }, flavor: '一声“哈”，万蛙齐笑。' });
   def('frenzy', { name: '狂笑', type: 'status', kind: 'buff', faction: 'laugh', cost: 3, art: 'frenzy',
@@ -104,21 +110,24 @@
   def('nolaugh', { name: '我再也不会笑了', type: 'status', kind: 'guard', faction: 'iron', cost: 3, art: 'nolaugh',
     play: [{ shield: 3 }], ally: [{ gain: 'power', n: 2 }], guard: { thorns: 3 },
     text: { play: '+3{s}。守势：对手每攻击你本体一次，自己受 3 点伤害', ally: '+2{p}' }, flavor: '头盔是榴莲做的，表情是认真的。' });
-  def('guard', { name: '铁甲奶蛙', type: 'char', faction: 'iron', cost: 6, art: 'guard', artMode: 'photo', fullArt: true,
+  def('guard', { name: '铁甲奶蛙', type: 'char', faction: 'iron', cost: 5, art: 'guard', artMode: 'photo', fullArt: true,
     play: [{ gain: 'power', n: 3 }, { if: 'hasStatue', then: [{ gain: 'power', n: 1 }] }], ally: [{ oppDiscard: 1 }],
     text: { play: '+3{p}。若你有雕塑，再 +1{p}', ally: '对手下回合开始时弃 1 张牌' }, flavor: '盔甲是借来的，气势是自己的。' });
-  def('king', { name: '曾经的王', type: 'char', faction: 'iron', cost: 6, art: 'king',
-    play: [{ gain: 'power', n: 3 }, { gain: 'energy', n: 1 }, { if: 'hasStatue', then: [{ draw: 1 }] }], scrap: [{ destroyStatue: { optional: true } }],
-    text: { play: '+3{p} +1{e}。若你有雕塑，抽 1 张', scrap: '击碎对手任意一座雕塑' }, flavor: '王冠没了，背心还在。' });
+  def('denial', { name: '根本没有这样的奶蛙', type: 'char', faction: 'iron', cost: 6, art: 'denial', artMode: 'photo', fullArt: true,
+    play: [{ gain: 'power', n: 3 }, { recall: { to: 'discard' } }], ally: [{ shield: 3 }],
+    text: { play: '+3{p}。从本回合删牌区取回 1 张牌放回弃牌堆', ally: '+3{s}' }, flavor: '删了？根本没有删。你只是怕了。' });
+  def('king', { name: '曾经的王', type: 'char', faction: 'iron', cost: 8, art: 'king',
+    play: [{ gain: 'power', n: 3 }, { gain: 'energy', n: 2 }, { if: 'hasStatue', then: [{ draw: 1 }] }], scrap: [{ destroyStatue: { optional: true } }],
+    text: { play: '+3{p} +2{e}。若你有雕塑，抽 1 张', scrap: '击碎对手任意一座雕塑' }, flavor: '王冠没了，背心还在。' });
 
   /* ---------- 西格玛会：抽牌与精简 ---------- */
   def('cat', { name: '猫耳奶蛙', type: 'char', faction: 'spirit', cost: 3, art: 'cat',
     play: [{ gain: 'coin', n: 1 }, { gain: 'power', n: 1 }], ally: [{ gain: 'energy', n: 1 }],
     text: { play: '+1{c} +1{p}', ally: '+1{e}' }, flavor: '猫耳是真的，奶蛙也是真的。' });
   def('angel', { name: '飞天奶蛙', type: 'char', faction: 'spirit', cost: 4, art: 'angel',
-    play: [{ gain: 'energy', n: 2 }, { gain: 'power', n: 1 }], ally: [{ trash: { from: ['hand', 'discard'], optional: true } }],
-    text: { play: '+2{e} +1{p}', ally: '获得 1 次删牌机会' }, flavor: '翅膀很小，境界很高。' });
-  def('sigma', { name: '西格奶', type: 'status', kind: 'buff', faction: 'spirit', cost: 4, art: 'sigma',
+    play: [{ draw: 1 }], ally: [{ draw: 1 }],
+    text: { play: '抽 1 张', ally: '再抽 1 张' }, flavor: '翅膀很小，境界很高。' });
+  def('sigma', { name: '西格奶', type: 'status', kind: 'buff', faction: 'spirit', cost: 5, art: 'sigma', alsoChar: true,
     play: [{ gain: 'energy', n: 1 }, { sigmaTrash: true }], ally: [{ gain: 'energy', n: 1 }], passive: 'sigma',
     text: { play: '+1{e}。本回合每张产生{e}的牌额外 +1{e}。获得 1 次删牌机会（可删抽牌堆中的牌）', ally: '+1{e}' }, flavor: '自律，是最好的奶劲。' });
 
@@ -129,10 +138,10 @@
   /* ---------- 十二生肖奶雕塑 ---------- */
   const statue = (id, name, faction, cost, hp, o) => def(id, Object.assign({ name, type: 'statue', faction, cost, hp }, o));
   statue('rooster', '奶鸡', 'egg', 5, 4, { turnStart: [{ if: 'otherStatue', then: [{ gain: 'coin', n: 2 }], else: [{ gain: 'coin', n: 1 }] }], text: { play: '回合开始：+1{c}；若有另一座雕塑，改为 +2{c}' } });
-  statue('goat', '奶羊', 'egg', 4, 4, { turnStart: [{ gain: 'coin', n: 1 }, { shield: 2 }], text: { play: '回合开始：+1{c} +2{s}' } });
+  statue('goat', '奶羊', 'egg', 4, 4, { taunt: true, turnStart: [{ gain: 'coin', n: 1 }], ally: [{ shield: 2 }], text: { play: '嘲讽。回合开始：+1{c}', ally: '+2{s}（每回合一次）' } });
   statue('pig', '奶猪', 'egg', 6, 4, { turnStart: [{ if: 'charsInHand2', then: [{ gain: 'coin', n: 2 }] }], text: { play: '回合开始：若手牌中至少有 2 张角色，+2{c}' } });
   statue('dragon', '奶龙', 'laugh', 7, 5, { turnStart: [{ if: 'otherStatue', then: [{ gain: 'power', n: 3 }], else: [{ gain: 'power', n: 2 }] }], text: { play: '回合开始：+2{p}；若有另一座雕塑，改为 +3{p}' } });
-  statue('tiger', '奶虎', 'laugh', 6, 4, { turnStart: [{ gain: 'power', n: 1 }, { if: 'otherStatue', then: [{ gain: 'power', n: 1 }] }], text: { play: '回合开始：+1{p}；若有另一座雕塑，再 +1{p}' } });
+  statue('tiger', '奶虎', 'laugh', 5, 4, { turnStart: [{ gain: 'power', n: 1 }, { if: 'otherStatue', then: [{ gain: 'power', n: 1 }] }], text: { play: '回合开始：+1{p}；若有另一座雕塑，再 +1{p}' } });
   statue('monkey', '奶猴', 'laugh', 5, 3, { turnStart: [{ if: 'otherStatue', then: [{ draw: 2 }, { discardSelf: 1 }] }], text: { play: '回合开始：若有另一座雕塑，抽 2 张，然后弃 1 张' } });
   statue('dog', '奶狗', 'iron', 5, 6, { taunt: true, onChar: [{ once: 'dog', then: [{ gain: 'power', n: 1 }] }], text: { play: '嘲讽。每回合首次打出角色牌时 +1{p}' } });
   statue('ox', '奶牛', 'iron', 6, 7, { taunt: true, turnStart: [{ gain: 'power', n: 1 }], text: { play: '嘲讽。回合开始：+1{p}' } });
@@ -145,9 +154,9 @@
 
   // 默认市场牌池（每个 id 出现的次数 = 张数）
   NW.DEFAULT_POOL = [].concat(
-    Array(3).fill('rich'), Array(2).fill('sleeper'), Array(2).fill('chieftain'), Array(2).fill('gate'),
+    Array(3).fill('rich'), Array(2).fill('sleeper'), Array(2).fill('chieftain'), Array(2).fill('gate'), Array(2).fill('thinker'),
     Array(3).fill('rocket'), Array(2).fill('scholar'), Array(2).fill('frenzy'), Array(2).fill('hold'), Array(2).fill('army'),
-    Array(2).fill('guard'), Array(2).fill('king'), Array(2).fill('nolaugh'),
+    Array(2).fill('guard'), Array(1).fill('king'), Array(2).fill('nolaugh'), Array(2).fill('denial'),
     Array(3).fill('cat'), Array(2).fill('angel'), Array(2).fill('sigma'), Array(2).fill('disdain'),
     ['rooster', 'rooster', 'goat', 'goat', 'pig', 'dragon', 'tiger', 'tiger', 'monkey', 'dog', 'dog', 'ox', 'horse', 'horse', 'snake', 'snake', 'rabbit', 'rabbit', 'rat', 'rat']
   );

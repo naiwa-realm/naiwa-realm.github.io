@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#15342e">
   <meta name="description" content="奶蛙领域：四大阵营联动、献祭与雕塑攻防的奶国牌库构筑对决。">
   <title>奶蛙领域</title>
@@ -45,7 +45,7 @@
           <div class="statues" id="statues-op"></div>
           <div class="opp-hand" id="oppHand"></div>
           <div class="opp-res" id="oppRes"><span class="zone-label">对手资源</span><div class="mini-res"><span class="c">◉ 0</span><span class="e">✦ 0</span><span class="p">✷ 0</span></div></div>
-          <div class="piles"><div class="pile" id="deck-op"></div><div class="pile" id="discard-op"></div></div>
+          <div class="piles"><div class="pile trash" id="trash-op" title="对手的删牌区"></div><div class="pile" id="deck-op"></div><div class="pile" id="discard-op"></div></div>
         </section>
 
         <!-- 市场 -->
@@ -63,7 +63,7 @@
           <div class="owner" id="playOwner"></div>
           <div class="status-chips" id="statusChips"></div>
           <div class="play-cards" id="playcards"></div>
-          <div class="limbo" id="limbo"><span>西格奶 · 删牌区</span><div class="slot-in" id="limboSlot"></div><button id="btnUndoTrash" data-act="undoTrash">撤回</button></div>
+          <div class="limbo" id="limbo"><span>西格奶 · 待删（可撤回）</span><div class="slot-in" id="limboSlot"></div><button id="btnUndoTrash" data-act="undoTrash">撤回</button></div>
           <div class="trash-ops" id="trashOps"><b id="trashOpsN">删牌机会 ×1</b><small>本回合内有效，可删手牌、弃牌堆，或市场中价格 ≤ 4 的牌</small><button class="btn gold" data-act="trashPick">选择要删的牌</button></div>
         </section>
         <div class="pending" id="pending"></div>
@@ -86,6 +86,7 @@
         </section>
 
         <section class="hand" id="hand"></section>
+        <div class="pile trash corner" id="trash-me" title="你的删牌区：删掉和献祭的牌放在这里"></div>
       </div>
 
       <div class="emotes" id="emotes">

@@ -24,7 +24,7 @@
   const NW = root.NW = root.NW || {};
   if (typeof require === 'function' && !NW.CARDS) { try { Object.assign(NW, require('./cards.js')); } catch (e) { /* 浏览器环境 */ } }
 
-  const ENGINE_VERSION = 3;
+  const ENGINE_VERSION = 5;
   const DEFAULT_RULES = {
     hp: 30,                // 初始生命
     handSize: 5,           // 每回合抽牌数
@@ -97,7 +97,8 @@
         coin: 0, energy: 0, power: 0, held: 0, shield: 0, trashOps: [],
         guards: [], pierce: false, nextPierce: false, lost: 0, // 守势状态（持续到自己下回合开始）/ 本回合破壳 / 本回合已失去的生命
         status: [], once: {}, allyDone: {}, topdeck: false, incomingDiscard: 0, limbo: null,
-        stats: { dmg: 0, bought: 0, trashed: 0, broke: 0, played: 0, healed: 0, maxPower: 0, allies: 0, absorbed: 0, statuesPlayed: 0, extraDraws: 0, thorns: 0, capped: 0, statusPlayed: 0, drawn: 0, maxTurnPlays: 0, bigHit: 0, maxTurnHeroHits: 0, trashedIds: {} },
+        trash: [], // 删牌区：本回合自己删掉或献祭的牌，公开；回合结束时清空（永久移出游戏）。本回合内可以被「取回」放回弃牌堆
+        stats: { dmg: 0, bought: 0, trashed: 0, broke: 0, played: 0, healed: 0, maxPower: 0, allies: 0, absorbed: 0, statuesPlayed: 0, extraDraws: 0, thorns: 0, capped: 0, statusPlayed: 0, drawn: 0, maxTurnPlays: 0, bigHit: 0, maxTurnHeroHits: 0, trashedIds: {}, recalled: 0 },
         turnPlays: 0, turnHeroHits: 0,
       };
       let deckIds = [];
@@ -226,13 +227,15 @@
   }
 
   /* ---------------- 条件与效果解释器 ---------------- */
+  // 双类型牌（alsoChar）：既是状态牌也算角色牌
+  const isChar = d => d.type === 'char' || !!d.alsoChar;
   function cond(state, seat, c) {
     const p = state.seats[seat];
     switch (c) {
       case 'hasStatue': return p.statues.length > 0;
       case 'otherStatue': return p.statues.length > 1;
       case 'hasEnergy': return p.energy > 0;
-      case 'charsInHand2': return p.hand.filter(u => card(state, u).type === 'char').length >= 2;
+      case 'charsInHand2': return p.hand.filter(u => isChar(card(state, u))).length >= 2;
       default: return false;
     }
   }
@@ -250,6 +253,7 @@
       if (e.shield) { p.shield += e.shield; ev(state, { t: 'shield', seat, n: e.shield, total: p.shield, src: ctx.src || null }); continue; }
       if (e.oppDiscard) { state.seats[other(seat)].incomingDiscard += e.oppDiscard; ev(state, { t: 'curse', seat: other(seat), n: e.oppDiscard, src: ctx.src }); log(state, seat, `${nameOf(state, other(seat))} 下回合需弃 ${e.oppDiscard} 张牌`); continue; }
       if (e.pierce) { p.pierce = true; ev(state, { t: 'pierce', seat, src: ctx.src }); log(state, seat, `${p.name} 本回合的攻击无视奶壳`); continue; }
+      if (e.shieldBank) { p.shieldBank = true; ev(state, { t: 'shieldBank', seat, src: ctx.src || null }); continue; }
       if (e.topdeckNext) { p.topdeck = true; ev(state, { t: 'topdeck', seat, src: ctx.src }); continue; }
       if (e.marketTrash) { enqueue(state, { seat, kind: 'marketTrash', maxCost: e.marketTrash.maxCost || 99, optional: true, src: ctx.src, prompt: `可从市场移除 1 张价格 ≤ ${e.marketTrash.maxCost || 99} 的牌` }); continue; }
       // 删牌不再立即弹出选择，而是给一次「删牌机会」，由玩家在本回合内主动使用
@@ -259,10 +263,18 @@
         if (state.seats[other(seat)].statues.length) enqueue(state, { seat, kind: 'destroyStatue', maxHp: e.destroyStatue.maxHp || 99, optional: e.destroyStatue.optional !== false, src: ctx.src, prompt: '选择要击碎的对手雕塑' });
         continue;
       }
+      if (e.recall) {
+        const r = e.recall, to = r.to || 'discard';
+        enqueue(state, { seat, kind: 'recall', to, maxCost: r.maxCost == null ? 99 : r.maxCost, optional: true, src: ctx.src,
+          prompt: `从本回合的删牌区取回 1 张${r.maxCost != null ? '费用 ≤ ' + r.maxCost + ' 的' : ''}牌${to === 'hand' ? '加入手牌' : to === 'top' ? '放到牌库顶' : '放回弃牌堆'}` });
+        continue;
+      }
       if (e.discardSelf) { const n = Math.min(e.discardSelf, p.hand.length); if (n) enqueue(state, { seat, kind: 'discard', n, optional: false, src: ctx.src, prompt: `选择 ${n} 张手牌弃掉` }); continue; }
     }
   }
 
+  /** 自己的牌进入删牌区 */
+  function toTrash(state, seat, uid) { state.seats[seat].trash.push(uid); }
   function noteTrash(state, seat, uid) { const t = state.seats[seat].stats.trashedIds, id = state.cards[uid]; t[id] = (t[id] || 0) + 1; }
 
   /* ---------------- 删牌机会（主动使用，回合结束失效） ---------------- */
@@ -302,6 +314,7 @@
       case 'sigma': return [].concat(p.hand, p.deck);
       case 'destroyStatue': return state.seats[other(c.seat)].statues.filter(s => s.hp <= c.maxHp).map(s => s.uid);
       case 'marketTrash': return state.market.filter(u => u && card(state, u).cost <= c.maxCost);
+      case 'recall': return p.trash.filter(u => (card(state, u).cost || 0) <= c.maxCost);
       default: return [];
     }
   }
@@ -322,7 +335,7 @@
       c.n--; if (c.n > 0 && p.hand.length) { c.prompt = `再选择 ${c.n} 张手牌弃掉`; return null; }
     } else if (c.kind === 'trash') {
       const zone = p.hand.includes(value) ? 'hand' : 'discard';
-      p[zone].splice(p[zone].indexOf(value), 1); state.trash.push(value); p.stats.trashed++; noteTrash(state, seat, value);
+      p[zone].splice(p[zone].indexOf(value), 1); toTrash(state, seat, value); p.stats.trashed++; noteTrash(state, seat, value);
       ev(state, { t: 'trash', seat, uid: value, from: zone }); log(state, seat, `${p.name} 删除了 ${name}`);
     } else if (c.kind === 'sigma') {
       const zone = p.hand.includes(value) ? 'hand' : 'deck', idx = p[zone].indexOf(value);
@@ -333,6 +346,11 @@
       ev(state, { t: 'marketChurn', slot: i, old: value, uid: state.market[i], by: seat }); log(state, seat, `${p.name} 从市场移除了 ${name}`);
     } else if (c.kind === 'destroyStatue') {
       breakStatue(state, other(seat), value, seat, 'effect');
+    } else if (c.kind === 'recall') {
+      p.trash.splice(p.trash.indexOf(value), 1); p.stats.recalled++;
+      if (c.to === 'hand') p.hand.push(value); else if (c.to === 'top') p.deck.push(value); else p.discard.push(value);
+      ev(state, { t: 'recall', seat, uid: value, to: c.to, src: c.src || null });
+      log(state, seat, `${p.name} 从删牌区取回了 ${name}${c.to === 'hand' ? '' : c.to === 'top' ? '（放到牌库顶）' : '（放入弃牌堆）'}`);
     }
     state.pending = null; nextPending(state); return null;
   }
@@ -345,7 +363,7 @@
     while (fired && !state.over) {
       fired = false;
       const presence = p.played.concat(p.statues.map(s => s.uid));
-      for (const uid of p.played) {
+      for (const uid of presence) {   // 雕塑也可以有联动（奶羊），每回合一次
         const d = card(state, uid);
         if (!d.ally || p.allyDone[uid] || d.faction === 'neutral') continue;
         const partner = presence.find(u => u !== uid && factionAt(state, u) === d.faction);
@@ -366,9 +384,15 @@
     if (p.guards.length) { ev(state, { t: 'guardFade', seat, ids: p.guards.map(g => g.id) }); p.guards = []; }
     state.seats[0].lost = state.seats[1].lost = 0; p.pierce = !!p.nextPierce; p.nextPierce = false;
     if (p.pierce) ev(state, { t: 'pierce', seat, src: 'hold' });
-    p.coin = 0; p.energy = 0; p.power = p.held; p.held = 0; p.shield = 0;
+    p.coin = 0; p.energy = 0; p.power = p.held; p.held = 0;
+    // 奶壳在自己回合开始时消失（实验规则 shieldKeep：保留一部分 / shieldToCoin：剩下的奶壳换奶蛋）
+    const sh = p.shield; p.shield = 0;
+    if (sh && state.rules.shieldKeep) p.shield = Math.min(state.rules.shieldCap || 99, Math.floor(sh * state.rules.shieldKeep));
+    p.pendingCoin = sh && state.rules.shieldToCoin ? Math.floor(sh / state.rules.shieldToCoin) : 0;
+    if (p.shieldBank) { p.pendingCoin += sh; p.shieldBank = false; }  // 奶蛋守护者：没用掉的奶壳 1:1 变奶蛋
     p.status = []; p.once = {}; p.allyDone = {}; p.topdeck = false; p.trashOps = []; p.turnPlays = 0; p.turnHeroHits = 0;
     ev(state, { t: 'turnStart', seat, round: state.round, carried: p.power });
+    if (p.pendingCoin) { gain(state, seat, 'coin', p.pendingCoin, { phase: 'shield' }); p.pendingCoin = 0; }
     if (p.power) log(state, seat, `憋笑保存的 ${p.power} 奶之力释放了`);
     draw(state, seat, first && seat === state.first && state.round === 1 ? state.rules.firstHand : state.rules.handSize);
     if (p.incomingDiscard) {
@@ -387,7 +411,9 @@
     p.held = p.status.includes('hold') ? p.power : 0;
     p.nextPierce = p.status.includes('hold');
     if (p.held) log(state, seat, `${p.name} 憋住了 ${p.held} 奶之力`);
-    if (p.limbo) { state.trash.push(p.limbo.uid); p.stats.trashed++; noteTrash(state, seat, p.limbo.uid); ev(state, { t: 'trash', seat, uid: p.limbo.uid, from: 'limbo' }); log(state, seat, `${p.name} 永久删去了 ${card(state, p.limbo.uid).name}`); p.limbo = null; }
+    if (p.limbo) { toTrash(state, seat, p.limbo.uid); p.stats.trashed++; noteTrash(state, seat, p.limbo.uid); ev(state, { t: 'trash', seat, uid: p.limbo.uid, from: 'limbo' }); log(state, seat, `${p.name} 永久删去了 ${card(state, p.limbo.uid).name}`); p.limbo = null; }
+    // 删牌区回合结束清空：本回合删掉 / 献祭的牌永久移出游戏
+    if (p.trash.length) { const uids = p.trash.slice(); state.trash.push(...uids); p.trash = []; ev(state, { t: 'trashPurge', seat, uids, ids: uids.map(u => state.cards[u]) }); }
     const moved = p.hand.concat(p.played);
     p.discard.push(...p.hand, ...p.played); p.hand = []; p.played = [];
     p.coin = p.energy = p.power = 0; p.status = []; p.topdeck = false; p.trashOps = []; p.pierce = false;
@@ -554,7 +580,7 @@
         const d = card(state, a.uid);
         p.played.splice(p.played.indexOf(a.uid), 1);
         if (d.type === 'status') { const k = p.status.indexOf(d.id); if (k >= 0) p.status.splice(k, 1); }
-        state.trash.push(a.uid);
+        toTrash(state, seat, a.uid);
         ev(state, { t: 'scrap', seat, uid: a.uid });
         log(state, seat, `${p.name} 献祭了 ${d.name}`);
         runEffects(state, seat, d.scrap, { src: a.uid, phase: 'scrap' });
@@ -569,7 +595,7 @@
           ev(state, { t: 'marketChurn', slot: i, old: t.uid, uid: state.market[i], by: seat });
           log(state, seat, `${p.name} 从市场移除了 ${name}`);
         } else {
-          p[t.zone].splice(p[t.zone].indexOf(t.uid), 1); state.trash.push(t.uid); p.stats.trashed++; noteTrash(state, seat, t.uid);
+          p[t.zone].splice(p[t.zone].indexOf(t.uid), 1); toTrash(state, seat, t.uid); p.stats.trashed++; noteTrash(state, seat, t.uid);
           ev(state, { t: 'trash', seat, uid: t.uid, from: t.zone });
           const gates = p.status.filter(x => NW.CARDS[x].passive === 'gate').length;
           if (gates) { gain(state, seat, 'coin', gates, { src: t.uid, phase: 'gate' }); ev(state, { t: 'passive', seat, kind: 'gate', uid: t.uid }); }
@@ -627,15 +653,15 @@
       const n = p.status.filter(s => s === 'sigma').length - (d.id === 'sigma' ? 1 : 0);
       if (n > 0) { gain(state, seat, 'energy', n, { src: uid, phase: 'sigma' }); ev(state, { t: 'passive', seat, kind: 'sigma', uid }); }
     }
-    if (d.type === 'char') {
+    if (isChar(d)) {
       const n = p.status.filter(s => NW.CARDS[s].passive === 'army').length;
       if (n > 0) { gain(state, seat, 'power', n, { src: uid, phase: 'army' }); ev(state, { t: 'passive', seat, kind: 'army', uid }); }
     }
     // 雕塑被动
     for (const st of p.statues.slice()) {
       const sd = card(state, st.uid);
-      const list = d.type === 'status' ? sd.onStatus : sd.onChar;
-      if (list) { ev(state, { t: 'statueTrigger', seat, uid: st.uid }); runEffects(state, seat, list, { src: st.uid, phase: 'statue' }); }
+      const lists = [d.type === 'status' && sd.onStatus, isChar(d) && sd.onChar].filter(Boolean);
+      for (const list of lists) { ev(state, { t: 'statueTrigger', seat, uid: st.uid }); runEffects(state, seat, list, { src: st.uid, phase: 'statue' }); }
     }
     checkAllies(state, seat);
     hook(state, 'afterPlay', seat, uid);
@@ -678,13 +704,13 @@
     const add = u => { if (u) visible.add(u); };
     const seats = state.seats.map((p, i) => {
       const mine = i === seat;
-      p.played.forEach(add); p.discard.forEach(add); p.statues.forEach(s => add(s.uid));
+      p.played.forEach(add); p.discard.forEach(add); p.trash.forEach(add); p.statues.forEach(s => add(s.uid));
       if (mine) { p.hand.forEach(add); if (p.limbo) add(p.limbo.uid); }
       return {
         name: p.name, portrait: p.portrait, tint: p.tint, hp: p.hp, maxHp: p.maxHp,
         coin: p.coin, energy: p.energy, power: p.power, held: p.held, shield: p.shield,
         guards: clone(p.guards), pierce: p.pierce, nextPierce: p.nextPierce, lost: p.lost,
-        status: p.status.slice(), played: p.played.slice(), statues: clone(p.statues), discard: p.discard.slice(),
+        status: p.status.slice(), played: p.played.slice(), statues: clone(p.statues), discard: p.discard.slice(), trash: p.trash.slice(),
         deckCount: p.deck.length, handCount: p.hand.length,
         deckList: mine ? p.deck.map(u => state.cards[u]).sort() : null, // 只给构成，不给顺序
         hand: mine ? p.hand.slice() : null,
@@ -708,7 +734,7 @@
         opts = opts.filter(u => !deck.includes(u)).concat(opts.filter(u => deck.includes(u)).sort((x, y) => state.cards[x] < state.cards[y] ? -1 : 1));
         pending.options = opts; opts.forEach(add);
         pending.zones = {};
-        for (const u of opts) pending.zones[u] = state.seats[seat].hand.includes(u) ? 'hand' : deck.includes(u) ? 'deck' : state.seats[seat].discard.includes(u) ? 'discard' : state.market.includes(u) ? 'market' : 'statue';
+        for (const u of opts) pending.zones[u] = state.seats[seat].hand.includes(u) ? 'hand' : deck.includes(u) ? 'deck' : state.seats[seat].discard.includes(u) ? 'discard' : state.market.includes(u) ? 'market' : state.seats[seat].trash.includes(u) ? 'trash' : 'statue';
       }
     }
     const cards = {}; for (const u of visible) cards[u] = state.cards[u];

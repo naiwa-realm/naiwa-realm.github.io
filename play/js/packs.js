@@ -15,11 +15,11 @@
   'use strict';
   const NW = root.NW = root.NW || {};
 
-  NW.VERSION = '8.3';
+  NW.VERSION = '8.5';
 
   const FORMAT = 1;                       // 本版本能读的扩展包格式
   const KEY = 'naiwa.packs.v1';
-  const COSMETIC = new Set(['name', 'text', 'flavor', 'art', 'artMode', 'fullArt']); // 不影响规则的字段
+  const COSMETIC = new Set(['name', 'text', 'flavor', 'art', 'artMode', 'fullArt', 'voice']); // 不影响规则的字段
 
   /* ---------- 稳定序列化 + 53 位哈希（cyrb53） ---------- */
   function stable(v, skip) {
@@ -47,7 +47,7 @@
   function save(d) { mem.data = d; try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) { /* 仅内存 */ } }
 
   /* ---------- 格式检查（format 1） ---------- */
-  const EFFECT_KEYS = ['gain', 'n', 'draw', 'shield', 'trash', 'sigmaTrash', 'destroyStatue', 'topdeckNext', 'discardSelf', 'oppDiscard', 'pierce', 'if', 'then', 'else', 'once'];
+  const EFFECT_KEYS = ['gain', 'n', 'draw', 'shield', 'trash', 'sigmaTrash', 'destroyStatue', 'topdeckNext', 'discardSelf', 'oppDiscard', 'pierce', 'recall', 'shieldBank', 'if', 'then', 'else', 'once'];
   const EFFECT_LISTS = ['play', 'ally', 'scrap', 'turnStart', 'onChar', 'onStatus'];
   const CONDS = ['hasStatue', 'otherStatue', 'hasEnergy', 'charsInHand2'];
   const PASSIVES = ['frenzy', 'sigma', 'army', 'gate', 'hold'];
@@ -64,6 +64,7 @@
       if (e.gain && !(Number.isInteger(e.n) && e.n >= 1 && e.n <= 20)) errs.push(`${at}.n 应为 1–20 的整数`);
       for (const k of ['draw', 'shield', 'discardSelf', 'oppDiscard']) if (k in e && !(Number.isInteger(e[k]) && e[k] >= 1 && e[k] <= 20)) errs.push(`${at}.${k} 应为 1–20 的整数`);
       if (e.trash && !(e.trash.from && Array.isArray(e.trash.from) && e.trash.from.every(z => z === 'hand' || z === 'discard'))) errs.push(`${at}.trash.from 只能包含 hand / discard`);
+      if (e.recall && !(typeof e.recall === 'object' && (!e.recall.to || ['hand', 'top', 'discard'].includes(e.recall.to)))) errs.push(`${at}.recall.to 只能是 hand / top / discard`);
       if (e.if) { if (!CONDS.includes(e.if)) errs.push(`${at}.if 未知条件「${e.if}」`); checkEffects(e.then || [], at + '.then', errs); if (e.else) checkEffects(e.else, at + '.else', errs); }
       if (e.once) { if (typeof e.once !== 'string') errs.push(`${at}.once 应为字符串`); checkEffects(e.then || [], at + '.then', errs); }
     });

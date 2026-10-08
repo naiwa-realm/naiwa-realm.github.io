@@ -79,7 +79,8 @@ packs/
 | `guard` | 守势效果：`{ "cap": 6 }` 每回合最多失去 6 点生命，或 `{ "thorns": 3 }` 反伤 3 |
 | `passive` | 状态牌被动：`frenzy` `sigma` `army` `gate` `hold`（含义见游戏内图鉴） |
 | `play` | 打出时的效果列表 |
-| `ally` | 联动效果（本回合打出过同阵营的牌，或场上有同阵营雕塑） |
+| `ally` | 联动效果（本回合打出过同阵营的牌，或场上有同阵营雕塑）。雕塑也可以有联动 |
+| `alsoChar` | 状态牌：`true` 时同时算作角色牌 |
 | `scrap` | 献祭效果（打出后可以移出游戏换取） |
 | `turnStart` | 雕塑：你的回合开始时 |
 | `onChar` / `onStatus` | 雕塑：你每打出一张角色 / 状态牌时 |
@@ -98,15 +99,19 @@ packs/
 | `{ "shield": 3 }` | 获得奶壳（持续到你下个回合开始） |
 | `{ "oppDiscard": 1 }` | 对手下回合开始时弃牌 |
 | `{ "pierce": true }` | 破壳：本回合攻击无视奶壳 |
+| `{ "shieldBank": true }` | 对手回合结束后没用掉的奶壳，在你下回合开始时变成等量奶蛋 |
 | `{ "topdeckNext": true }` | 本回合下一张购入的牌放到牌库顶 |
 | `{ "trash": { "from": ["hand", "discard"] } }` | 获得 1 次删牌机会 |
 | `{ "sigmaTrash": true }` | 获得 1 次删牌机会，可以删抽牌堆里的牌 |
 | `{ "destroyStatue": { "maxHp": 5 } }` | 击碎对手一座耐久不超过 5 的雕塑 |
 | `{ "discardSelf": 1 }` | 自己弃牌 |
+| `{ "recall": { "to": "hand", "maxCost": 4 } }` | 从自己的删牌区取回 1 张牌：`to` 为 `hand` 手牌 / `top` 牌库顶 / `discard` 弃牌堆；`maxCost` 可选，限制费用 |
 | `{ "if": "hasStatue", "then": [...], "else": [...] }` | 条件：`hasStatue` `otherStatue` `hasEnergy` `charsInHand2` |
 | `{ "once": "名字", "then": [...] }` | 每回合限一次 |
 
-需要玩家做选择的效果（删牌、击碎、弃牌）放在列表最后。
+需要玩家做选择的效果（删牌、击碎、弃牌、取回）放在列表最后。
+
+**删牌区**：每位玩家桌边都有一个公开的删牌区。删掉的牌、献祭的牌都进入这里，不再参与洗牌，只有 `recall` 能拿回来。
 
 ## 指纹与联机
 

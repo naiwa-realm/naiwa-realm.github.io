@@ -7,12 +7,14 @@
   const NW = root.NW = root.NW || {};
 
   const PROFILES = {
-    easy:   { label: '新手', think: 560, knapsack: false, lethal: false, scrap: false, statueAggro: 0.1, randomness: 4, minBuy: 0.5, buyChance: 0.55, useEnergy: 0.3, bias: {} },
-    normal: { label: '标准', think: 440, knapsack: true,  lethal: true,  scrap: true,  statueAggro: 0.6, randomness: 0.6, minBuy: 0.8, bias: {} },
-    hard:   { label: '大师', think: 380, knapsack: true,  lethal: true,  scrap: true,  statueAggro: 1.0, randomness: 0.15, minBuy: 1.0, synergy: 0.55,
-              // 由 work/tune.js 自对弈爬山得到的购买偏好
-              bias: { errand: 0.85, rich: 0.91, sleeper: 1.39, chieftain: 0.89, rocket: 1.44, scholar: 0.95, frenzy: 0.7, hold: 0.88, guard: 1.14, king: 0.97, cat: 0.75, angel: 1.36, sigma: 1.26, rooster: 0.71, goat: 0.9, pig: 1.6, dragon: 1.12, tiger: 0.82, monkey: 0.7, dog: 1.44, ox: 1.4, horse: 0.91, snake: 0.79, rabbit: 1.04, rat: 0.7 } },
+    easy:   { label: '新手', think: 560, values: 'cost', knapsack: false, lethal: false, scrap: false, statueAggro: 0.1, randomness: 4, minBuy: 0.5, buyChance: 0.55, useEnergy: 0.3, bias: {} },
+    normal: { label: '标准', think: 440, knapsack: true,  lethal: true,  scrap: true,  statueAggro: 0.6, randomness: 0.6, values: 'cost', valueMix: 0.4, minBuy: 0.8, bias: {} },
+    hard:   { label: '大师', think: 380, knapsack: true,  lethal: true,  scrap: true,  statueAggro: 1.0, randomness: 0.15, minBuy: 1.0, synergy: 0.49, bias: {} },
   };
+  /* 每张牌的「内在价值」：AI 购买、保留、拆雕塑时用它，而不是用价格——这样改价格不会改变 AI 对牌的判断。
+   * 由 tools/train_ai.js 自对弈爬山得到（见 README）。 */
+  const VALUE = {"errand":0.48,"rich":1.59,"sleeper":4.02,"gate":2.99,"thinker":2.12,"chieftain":3.98,"rocket":1.44,"scholar":2.2,"army":8.97,"frenzy":2.95,"hold":2.29,"nolaugh":2.54,"guard":5.26,"denial":9.31,"king":14,"cat":1.24,"angel":5.02,"sigma":11.44,"disdain":4.48,"rooster":4.1,"goat":3.6,"pig":3.93,"dragon":7.84,"tiger":3.29,"monkey":2.52,"dog":7.65,"ox":9.46,"horse":4.22,"snake":1.64,"rabbit":4.16,"rat":3.18};
+  const valOf = (id, prof) => { if (prof && prof.values === 'cost') { const c = NW.CARDS[id].cost || 0, m = prof.valueMix || 0; return m ? m * (VALUE[id] != null ? VALUE[id] : c) + (1 - m) * c : c; } const t = (prof && prof.values) || VALUE; return t[id] != null ? t[id] : (NW.CARDS[id].cost || 0); };
 
   const C = id => NW.CARDS[id];
   const idOf = (st, uid) => st.cards[uid];
@@ -20,22 +22,22 @@
 
   function keepValue(id) {
     if (id === 'flower') return -1; if (id === 'baby') return 0; if (id === 'laugh') return 0.5; if (id === 'kungfu') return 0.6;
-    const c = C(id); return 1 + c.cost * 0.5;
+    return 1 + valOf(id) * 0.5;
   }
   function statueValue(id) {
-    const c = C(id); return c.cost * 0.8 + (c.taunt ? 1.5 : 0) + c.hp * 0.15;
+    const c = C(id); return valOf(id) * 0.8 + (c.taunt ? 1.5 : 0) + c.hp * 0.15;
   }
 
   function cardValue(st, seat, id, prof) {
     const c = C(id), p = st.seats[seat];
-    let v = c.cost;
+    let v = valOf(id, prof);
     const round = st.round;
     const produces = JSON.stringify(c.play || []) + JSON.stringify(c.turnStart || []);
     if (round <= 4 && produces.includes('coin')) v += 1.2;
     if (round >= 8 && produces.includes('power')) v += 1;
     if (round >= 9 && produces.includes('"coin"') && !produces.includes('power')) v -= 1;
     if (c.type === 'statue') v += round <= 6 ? 0.8 : -0.4;
-    if (id === 'errand') v = round <= 5 ? 1.6 : 1.0;
+    if (id === 'errand' && round > 5) v *= 0.62;
     if (c.faction !== 'neutral') {
       const same = allCards(p).filter(u => C(idOf(st, u)).faction === c.faction).length;
       v += Math.min(same, 6) * (prof.synergy || 0.35);
@@ -66,6 +68,11 @@
     if (pd.kind === 'marketTrash') { // 拿走对手最想要的牌
       const best = opts.map(u => ({ u, v: cardValue(st, 1 - seat, idOf(st, u), prof) })).sort((a, b) => b.v - a.v)[0];
       return { type: 'choose', seat, value: best && best.v >= 4 ? best.u : 'skip' };
+    }
+    if (pd.kind === 'recall') { // 取回最值钱的牌（献祭牌加分，起始牌不要）
+      const val = u => { const id = idOf(st, u), c = C(id); return keepValue(id) + (c.scrap ? 1.5 : 0) + (id === 'king' ? 1 : 0); };
+      const best = opts.slice().sort((a, b) => val(b) - val(a))[0];
+      return { type: 'choose', seat, value: best && val(best) >= 1.5 ? best : 'skip' };
     }
     if (pd.kind === 'destroyStatue') {
       const best = opts.slice().sort((a, b) => statueValue(idOf(st, b)) - statueValue(idOf(st, a)))[0];
@@ -116,7 +123,9 @@
     const status = hand.find(h => h.c.type === 'status');
     if (status) return { type: 'play', seat, uid: status.uid };
     // 3) 角色：抽牌的先打
-    const chars = hand.filter(h => h.c.type === 'char');
+    // 带「取回」的牌留到删牌和献祭之后再打（删牌区里有东西才取得回来）
+    const isRecall = h => JSON.stringify(h.c.play || []).includes('recall');
+    const chars = hand.filter(h => h.c.type === 'char' && !isRecall(h));
     if (chars.length) {
       chars.sort((a, b) => (JSON.stringify(b.c.play).includes('draw') ? 1 : 0) - (JSON.stringify(a.c.play).includes('draw') ? 1 : 0));
       return { type: 'play', seat, uid: chars[0].uid };
@@ -135,8 +144,12 @@
     // 5) 献祭
     if (prof.scrap) {
       const taunts = o.statues.filter(s => C(idOf(st, s.uid)).taunt);
+      // 手里有取回牌：这回合献祭掉的牌还能放回弃牌堆，献祭几乎白赚
+      const recaller = hand.some(isRecall);
       for (const uid of p.played) {
         const id = idOf(st, uid);
+        if (recaller && id === 'errand') return { type: 'scrap', seat, uid };
+        if (recaller && id === 'king' && o.statues.length) return { type: 'scrap', seat, uid };
         if (id === 'king' && o.statues.length) {
           const tauntHp = taunts.reduce((s, x) => s + x.hp, 0);
           const blocked = taunts.length && p.power < tauntHp;
@@ -150,6 +163,9 @@
         }
       }
     }
+    // 5.5) 取回牌
+    const rc = hand.find(h => h.c.type === 'char' && isRecall(h));
+    if (rc) return { type: 'play', seat, uid: rc.uid };
     // 6) 购买
     const buy = (prof.buyChance == null || Math.random() < prof.buyChance) ? knapsack(st, seat, prof) : null;
     if (buy && ok({ type: 'buy', seat, slot: buy.slot })) return { type: 'buy', seat, slot: buy.slot };
@@ -199,6 +215,6 @@
     return { type: 'endTurn', seat };
   }
 
-  NW.AI = { PROFILES, decide, cardValue, statueValue, keepValue };
+  NW.AI = { PROFILES, VALUE, decide, cardValue, statueValue, keepValue };
   if (typeof module !== 'undefined' && module.exports) module.exports = NW;
 })(typeof window !== 'undefined' ? window : globalThis);

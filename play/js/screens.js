@@ -244,20 +244,39 @@
           <div class="field"><label>玩家一（先手）</label><input id="hsA" value="玩家一" maxlength="8"></div>
           <div class="field"><label>玩家二</label><input id="hsB" value="玩家二" maxlength="8"></div>
           <div class="row-btns"><button class="btn big gold" data-hotseat>开始对战</button></div></div>
-        <div class="panel"><h3>联机对战 <span class="mode-chip">测试版</span></h3><p>点对点直连：两台设备各复制一次连接码（用微信发就行），不需要服务器，同一 Wi-Fi / 热点下最稳定。请用浏览器打开游戏页面（在 Claude 内预览时无法直连）。</p>
+        <div class="panel"><h3>联机对战 <span class="mode-chip">测试版</span></h3><p>点对点直连：两台设备各复制一次连接码（用微信发就行），不需要服务器。同一 Wi-Fi / 热点、同一个国家选「直连」；<b>跨国</b>选「Radmin 跨国」：两人都开 Radmin VPN 进同一个网络，填上自己的 Radmin 地址。请用浏览器打开游戏页面（在 Claude 内预览时无法直连）。</p>
           <div class="field"><label>你的名字</label><input id="netName" value="${esc(name)}" maxlength="8"></div>
-          <div class="field"><label>连接方式</label><select id="netKind"><option value="rtc">点对点直连（无需服务器，交换连接码）</option><option value="ws">WebSocket 服务器（server/pvp-server.mjs）</option><option value="bc">同一浏览器的另一个标签页（本地测试）</option></select></div>
-          <div class="field" id="wsField" style="display:none"><label>服务器地址</label><input id="netUrl" value="ws://localhost:8787"></div>
+          <div class="field"><label>连接方式</label><input type="hidden" id="netKind" value="${S.netMode || 'rtc'}">
+            <div class="seg" id="netSeg">${[['rtc', '直连', '同国家 / 同 Wi-Fi'], ['radmin', 'Radmin 跨国', '两人都开 Radmin'], ['bc', '本地测试', '同一浏览器两个标签页']].map(([k, a, b]) => `<button type="button" class="seg-b${(S.netMode || 'rtc') === k ? ' on' : ''}" data-netmode="${k}"><b>${a}</b><small>${b}</small></button>`).join('')}</div></div>
+          <div class="field" id="vipField"><label>我的 Radmin 地址（Radmin 窗口里自己名字旁的 26.x.x.x）</label><input id="netVip" value="${esc(S.vip())}" placeholder="26.x.x.x" maxlength="15" inputmode="decimal"></div>
           <div class="field" id="roomField" style="display:none"><label>房间号</label><input id="netRoom" value="${Math.floor(Math.random() * 9000 + 1000)}" maxlength="12"></div>
-          <div class="rtc-box" id="rtcBox" style="display:none">
-            <div class="field"><label id="rtcOutLabel">你的连接码（复制发给对方）</label><textarea id="rtcOut" readonly rows="3"></textarea><button class="btn ghost" data-rtc="copy">复制连接码</button></div>
-            <div class="field" id="rtcInField"><label id="rtcInLabel">粘贴对方的连接码</label><textarea id="rtcIn" rows="3" placeholder="NW1…"></textarea><button class="btn gold" data-rtc="apply">确定</button></div>
-          </div>
           <div class="row-btns"><button class="btn big gold" data-net="host">创建房间</button><button class="btn big ghost" data-net="guest">加入房间</button></div>
-          <div class="net-status" id="netStatus"></div></div>
+          <div class="net-status" id="netStatus"></div>
+          <div class="rtc-box" id="rtcBox" style="display:none">
+            <div class="field"><label id="rtcOutLabel">你的连接码（复制发给对方）</label><textarea id="rtcOut" readonly rows="2"></textarea><button class="btn ghost" data-rtc="copy">复制连接码</button></div>
+            <div class="field" id="rtcInField"><label id="rtcInLabel">粘贴对方的连接码</label><textarea id="rtcIn" rows="2" placeholder="NW1…"></textarea><button class="btn gold" data-rtc="apply">确定</button></div>
+          </div>
+          </div>
       </div>`;
-    const sync = () => { const k = $('#netKind').value; $('#wsField').style.display = k === 'ws' ? '' : 'none'; $('#roomField').style.display = k === 'rtc' ? 'none' : ''; };
-    $('#netKind').onchange = sync; sync();
+    const sync = () => {
+      const k = $('#netKind').value; S.netMode = k;
+      $('#vipField').style.display = k === 'radmin' ? '' : 'none'; $('#roomField').style.display = k === 'bc' ? '' : 'none';
+      document.querySelectorAll('#netSeg .seg-b').forEach(b => b.classList.toggle('on', b.dataset.netmode === k));
+      S.resetNet();
+    };
+    $('#netSeg').onclick = e => { const b = e.target.closest('[data-netmode]'); if (!b || b.dataset.netmode === $('#netKind').value) return; $('#netKind').value = b.dataset.netmode; sync(); };
+    sync();
+  };
+  /** 记住 Radmin 地址（每台电脑固定） */
+  S.vip = v => { try { if (v === undefined) return localStorage.getItem('naiwa.vip') || ''; localStorage.setItem('naiwa.vip', v); } catch (e) { /* 隐私模式 */ } return v || ''; };
+  /** 切换连接方式 / 重新点创建或加入：清空上一次的连接码、输入框和状态，关掉没连上的直连 */
+  S.resetNet = () => {
+    NW.Main.resetRtc && NW.Main.resetRtc();
+    S.rtcRole = null; S.rtcStep = null;
+    const box = $('#rtcBox'); if (!box) return;
+    box.style.display = 'none'; $('#rtcOut').value = ''; $('#rtcIn').value = '';
+    $('#rtcInField').style.display = ''; $('#rtcOutLabel').parentNode.style.display = '';
+    S.rtcUi.status('');
   };
 
   /* ---------- 结算 ---------- */
@@ -301,13 +320,15 @@
       <p><b>角色</b>立即生效；<b>状态</b>只在本回合生效；<b>雕塑</b>留在场上，从你的下个回合开始持续触发，每人最多 3 座。带<b>嘲讽</b>的雕塑在场时，对手必须先击碎它才能攻击你。被击碎或替换的雕塑进入原主人的弃牌堆。</p>
       <h3>四个阵营与联动</h3>
       <p>${Object.entries(FACTIONS).filter(([k]) => k !== 'neutral').map(([k, x]) => `<span class="tag" style="border-color:${x.color};color:${x.color}">${x.name} · ${x.desc}</span>`).join(' ')}</p>
-      <p><b>联动</b>：本回合你打出了另一张同阵营的牌，或你场上有同阵营的雕塑时，该牌的联动效果自动触发（每张牌每回合一次）。手牌上的「联动就绪」提示表示现在打出就会触发。</p>
+      <p><b>联动</b>：本回合你打出了另一张同阵营的牌，或你场上有同阵营的雕塑时，该牌的联动效果自动触发（每张牌每回合一次）。少数雕塑（奶羊）也有联动：你打出同阵营的牌时触发，每回合一次。手牌上的「联动就绪」提示表示现在打出就会触发。</p>
       <h3>状态牌</h3>
-      <p>状态牌打出后进入出牌区，按类型生效：<br><b>增益</b>（狂笑、哈家军、西格奶、奶门的世界）：本回合有效，强化之后打出的牌，所以先打状态、再打角色（「全部打出」会自动这样排序）。<br><b>守势</b>（惊鸿一瞥、我再也不会笑了）：效果持续到你下个回合开始，在对手的回合保护你，头像旁会显示紫色的守势标记，对手也看得到。<br><b>蓄势</b>（憋笑）：本回合没用完的奶之力留到下回合，并且下回合破壳。<br><b>破壳</b>：攻击对手本体时伤害不会被奶壳吸收（哈家军联动、憋笑）。西格玛会的奶蛇、奶兔会在你每次打出状态牌时触发。</p>
+      <p>状态牌打出后进入出牌区，按类型生效：<br><b>增益</b>（狂笑、哈家军、西格奶、奶门的世界）：本回合有效，强化之后打出的牌，所以先打状态、再打角色（「全部打出」会自动这样排序）。<br><b>守势</b>（惊鸿一瞥、我再也不会笑了）：效果持续到你下个回合开始，在对手的回合保护你，头像旁会显示紫色的守势标记，对手也看得到。<br><b>蓄势</b>（憋笑）：本回合没用完的奶之力留到下回合，并且下回合破壳。<br><b>破壳</b>：攻击对手本体时伤害不会被奶壳吸收（哈家军联动、憋笑）。西格玛会的奶蛇、奶兔会在你每次打出状态牌时触发。<b>西格奶</b>同时算作角色牌（也会触发哈家军、奶狗等「打出角色牌时」的效果）。</p>
       <h3>奶壳</h3>
-      <p class="rich-text">${f('{s} 奶壳')}：躺平派的防御资源。吸收对你本体的伤害，持续到你下个回合开始时消失，不能累积到之后的回合；雕塑不受保护。</p>
+      <p class="rich-text">${f('{s} 奶壳')}：躺平派的防御资源。吸收对你本体的伤害，持续到你下个回合开始时消失，不能累积到之后的回合；雕塑不受保护。<b>奶蛋守护者</b>能把对手回合里没用掉的奶壳，在你下回合开始时换成等量奶蛋。</p>
       <h3>献祭与删牌</h3>
-      <p><b>献祭</b>：部分牌打出后，可点击出牌区中的「献祭」把它永久移出游戏，换取一次性效果。<br><b>删牌机会</b>：飞天奶蛙、奶蛋守护者（联动）、西格奶，以及<b>精英招募</b>（招募价格 5 及以上的牌）会给你 1 次删牌机会。点击出牌区右侧的「选择要删的牌」，挑一张并确认：可删手牌或弃牌堆中的牌（西格奶还能删抽牌堆），也可以移除市场中价格 ≤ 4 的牌换一张新的。删牌机会在回合结束时失效，不会被误点触发。</p>
+      <p><b>献祭</b>：部分牌打出后，可点击出牌区中的「献祭」把它送进删牌区，换取一次性效果。<br><b>删牌机会</b>：奶蛋守护者（联动）、奶门的世界、西格奶，以及<b>精英招募</b>（招募价格 5 及以上的牌）会给你 1 次删牌机会。点击出牌区右侧的「选择要删的牌」，挑一张并确认：可删手牌或弃牌堆中的牌（西格奶还能删抽牌堆），也可以移除市场中价格 ≤ 4 的牌换一张新的。删牌机会在回合结束时失效，不会被误点触发。</p>
+      <h3>删牌区</h3>
+      <p>每位玩家在桌边都有一个<b>删牌区</b>（你的在右下角，对手的在右上角牌库旁边），本回合删掉和献祭的牌都先放在这里，公开可见。<b>回合结束时删牌区清空</b>，里面的牌永久移出游戏。在那之前，带「取回」效果的牌可以把其中一张<b>放回弃牌堆</b>：<b>根本没有这样的奶蛙</b>（嘴硬帮）取回任意一张——先献祭曾经的王拆掉雕塑，再打出它把王放回弃牌堆，下次还能再拆；<b>思考奶蛙</b>（躺平派）取回一张费用 ≤ 4 的牌。所以取回牌要在删牌、献祭之后再打。</p>
       <h3>操作</h3>
       <p>拖动手牌到牌桌中央打出（或直接点击）· 按住「奶之力」拖出箭头瞄准 · 点击市场的牌购买 · 右键（手机上长按）任意卡牌查看详情<br>快捷键：<b>空格</b> 全部打出 · <b>E</b> 结束回合 · <b>D</b> 消耗奶劲抽牌 · <b>Esc</b> 取消</p>
       <p>新手建议从「奶国远征」第一章开始，前三关有教官一步步带你操作。</p>
@@ -333,7 +354,8 @@
       ${c.flavor ? `<p><i>${esc(c.flavor)}</i></p>` : ''}
       ${c.cost ? `<p>价格：${c.cost} 奶蛋</p>` : '<p>起始牌</p>'}
       ${c.ally ? `<p><b>联动</b>：本回合你已打出另一张${FACTIONS[c.faction].name}的牌，或场上有${FACTIONS[c.faction].name}雕塑时自动触发。</p>` : ''}
-      ${c.scrap ? '<p><b>献祭</b>：打出后可在出牌区点击「献祭」，把这张牌移出游戏并获得效果。</p>' : ''}
+      ${c.scrap ? '<p><b>献祭</b>：打出后可在出牌区点击「献祭」，把这张牌送进删牌区并获得效果。</p>' : ''}
+      ${JSON.stringify(c.play || []).includes('recall') ? '<p><b>取回</b>：从你本回合的删牌区（这回合删掉或献祭的牌）选 1 张放回弃牌堆；所以要先删牌或献祭，再打出这张牌。删牌区为空时可以跳过。</p>' : ''}
       ${c.type === 'statue' ? `<p><b>雕塑</b>：耐久 ${c.hp}${c.taunt ? '，嘲讽' : ''}。从你的下个回合开始生效。</p>` : ''}
       </div></div>`);
   };
@@ -348,6 +370,8 @@
     let ids, title, note;
     if (kind === 'deck') { ids = me.deckList || []; title = `你的抽牌堆 · ${ids.length} 张`; note = '只显示构成（已按名称排序），不代表抽牌顺序。'; }
     else if (kind === 'discard') { ids = me.discard.map(u => v.cards[u]); title = `你的弃牌堆 · ${ids.length} 张`; note = '打出的牌在回合结束后进入这里；被击碎或替换的雕塑也会进入这里。'; }
+    else if (kind === 'trash') { ids = (me.trash || []).map(u => v.cards[u]); title = `你的删牌区 · ${ids.length} 张`; note = '本回合删掉和献祭的牌。回合结束时清空，里面的牌永久移出游戏；在那之前，「根本没有这样的奶蛙」「思考奶蛙」可以把其中一张放回弃牌堆。'; }
+    else if (kind === 'oppTrash') { ids = (op.trash || []).map(u => v.cards[u]); title = `${op.name} 的删牌区 · ${ids.length} 张`; note = '对手本回合删掉和献祭的牌，公开可见。'; }
     else { ids = op.discard.map(u => v.cards[u]); title = `${op.name} 的弃牌堆 · ${ids.length} 张`; note = '对手公开的牌。'; }
     S.modal(`<div class="eyebrow">牌库</div><h2>${esc(title)}</h2><p>${note}</p><div class="grid-cards">${ids.length ? ids.map(id => NW.UI.cardHTML(id)).join('') : '<p>这里暂时没有牌</p>'}</div>`);
   };
@@ -356,7 +380,7 @@
     const pd = UI.view.pending; if (!pd || !pd.options) return;
     const zones = Array.from(new Set(pd.options.map(u => pd.zones[u])));
     zone = zones.includes(zone) ? zone : zones[0];
-    const name = { hand: '手牌', deck: '抽牌堆', discard: '弃牌堆' };
+    const name = { hand: '手牌', deck: '抽牌堆', discard: '弃牌堆', trash: '删牌区' };
     const list = pd.options.filter(u => pd.zones[u] === zone);
     S.modal(`<div class="eyebrow">做出选择</div><h2>${esc(pd.prompt)}</h2>
       <div class="tabs">${zones.map(z => `<button data-pick-zone="${z}" class="${z === zone ? 'on' : ''}">${name[z] || z} · ${pd.options.filter(u => pd.zones[u] === z).length}</button>`).join('')}</div>
@@ -375,7 +399,7 @@
     const list = z => z === 'hand' ? (me.hand || []) : z === 'discard' ? me.discard : z === 'deck' ? (me.deckChoices || []) : v.market.filter(u => u && CARDS[v.cards[u]].cost <= op.market);
     const cards = list(zone);
     S.modal(`<div class="eyebrow">删牌机会 ×${ops.length}</div><h2>选择要删除的牌</h2>
-      <p>被删除的牌永久移出游戏。删掉起始的「普通奶娃」能让好牌更常被抽到；也可以移除市场里价格 ≤ ${op.market} 的牌，换一张新的上来。删牌机会在回合结束时失效。</p>
+      <p>被删除的牌先进入你的删牌区（右下角），回合结束时永久移出游戏；本回合内可以用「取回」放回弃牌堆。删掉起始的「普通奶娃」能让好牌更常被抽到；也可以移除市场里价格 ≤ ${op.market} 的牌，换一张新的上来。删牌机会在回合结束时失效。</p>
       <div class="tabs">${zones.map(z => `<button data-tp-zone="${z}" class="${z === zone ? 'on' : ''}">${name[z]} · ${list(z).length}</button>`).join('')}</div>
       <div class="grid-cards">${cards.length ? cards.map(u => NW.UI.cardHTML(v.cards[u], `data-tp-card="${u}" data-tp-zone-of="${zone}"`).replace('class="card', `class="card${u === sel ? ' tp-sel' : ''}`)).join('') : '<p>这里没有可以删除的牌</p>'}</div>
       <div class="row-btns">${sel ? `<button class="btn big gold" data-tp-confirm="${sel}">确认删除「${esc(CARDS[v.cards[sel]].name)}」</button>` : '<span style="font-size:13px;color:#cfd6be">先点一张牌</span>'}<button class="btn big ghost" data-close>暂不使用</button></div>`, 'picker-trash');
@@ -385,7 +409,7 @@
   S.rtcUi = {
     status: t => { const el = $('#netStatus'); if (el) el.textContent = t; },
     showCode: (code, kind) => { const el = $('#rtcOut'); if (el) { el.value = code; el.parentNode.style.display = ''; } },
-    state: st => { const m = { connecting: '正在连接…', connected: '已连接！', open: '通道已打开，开始对局', failed: '连接失败：两台设备可能不在同一网络，或网络不支持打洞（可改用 WebSocket 服务器 / 内网穿透）', disconnected: '连接中断' }; if (m[st]) { S.rtcUi.status(m[st]); if (NW.UI.session) NW.FX.toast(m[st]); } },
+    state: st => { const m = { connecting: '正在连接…', connected: '已连接！', open: '通道已打开，开始对局', failed: '连接失败：网络不支持直接打洞。跨国或公司 / 校园网请改选「Radmin 跨国」：两人都开 Radmin VPN 进同一网络，填上 Radmin 地址后重新交换连接码', disconnected: '连接中断' }; if (m[st]) { S.rtcUi.status(m[st]); if (NW.UI.session) NW.FX.toast(m[st]); } },
   };
 
   S.emote = (id, mine) => {
@@ -464,10 +488,15 @@
       if (t.closest('[data-hotseat]')) return NW.Main.startHotseat($('#hsA').value.trim() || '玩家一', $('#hsB').value.trim() || '玩家二');
       const net = t.closest('[data-net]');
       if (net) {
-        const o = { name: $('#netName').value.trim() || '奶蛙', kind: $('#netKind').value, url: $('#netUrl').value.trim(), room: $('#netRoom').value.trim() || '1' };
+        const mode = $('#netKind').value, vip = mode === 'radmin' ? $('#netVip').value.trim() : '';
+        const o = { name: $('#netName').value.trim() || '奶蛙', kind: mode === 'bc' ? 'bc' : 'rtc', room: $('#netRoom').value.trim() || '1', virtualIp: vip };
+        S.resetNet();
         if (o.kind !== 'rtc') return NW.Main.startOnline(net.dataset.net, o);
+        if (mode === 'radmin' && !NW.Net.IPV4.test(vip)) return S.rtcUi.status(vip ? 'Radmin 地址格式不对，应该像 26.12.34.56（在 Radmin 窗口里自己名字旁边）' : '请先填上你的 Radmin 地址（Radmin 窗口里自己名字旁边的 26.x.x.x）');
+        S.vip(vip);
         S.rtcRole = net.dataset.net; S.rtcOpts = o; S.rtcStep = net.dataset.net === 'host' ? 'host-wait-answer' : 'guest-wait-offer';
         $('#rtcBox').style.display = ''; $('#rtcOut').value = ''; $('#rtcIn').value = '';
+        setTimeout(() => { const pn = $('#rtcBox').closest('.panel'); if (pn) pn.scrollTop = pn.scrollHeight; }, 60);
         $('#rtcOutLabel').parentNode.style.display = net.dataset.net === 'host' ? '' : 'none';
         $('#rtcInLabel').textContent = net.dataset.net === 'host' ? '第 2 步：粘贴对方发回的回应码' : '第 1 步：粘贴房主发来的邀请码';
         $('#rtcOutLabel').textContent = net.dataset.net === 'host' ? '第 1 步：复制邀请码发给对方' : '第 2 步：复制回应码发回房主';

@@ -229,5 +229,31 @@
   };
   FX.sfx = name => { if (!FX.sound || !SFX[name]) return; try { SFX[name](); } catch (e) { /* 忽略 */ } };
 
+  /* ---------- 卡牌语音（采样）：assets/sfx/*.mp3，单文件版内联在 NW.SFX_DATA ---------- */
+  const VOICE_BUF = {}, VOICE_LOAD = {};
+  let voiceSrc = null;
+  function loadVoice(name) {
+    if (VOICE_LOAD[name]) return VOICE_LOAD[name];
+    const a = ac(); if (!a) return Promise.resolve(null);
+    const url = (NW.SFX_DATA && NW.SFX_DATA[name + '.mp3']) || `assets/sfx/${name}.mp3`;
+    VOICE_LOAD[name] = fetch(url).then(r => r.arrayBuffer()).then(b => new Promise((ok, no) => a.decodeAudioData(b, ok, no)))
+      .then(buf => (VOICE_BUF[name] = buf)).catch(() => null);
+    return VOICE_LOAD[name];
+  }
+  /** 播放一段采样；同一时间只放一段，新的打断旧的 */
+  FX.voice = (name, vol = .5) => {
+    if (!FX.sound) return;
+    const a = ac(); if (!a) return;
+    const go = buf => {
+      if (!buf) return;
+      try { if (voiceSrc) voiceSrc.stop(); } catch (e) { /* 已结束 */ }
+      const src = a.createBufferSource(), g = a.createGain(); g.gain.value = vol;
+      src.buffer = buf; src.connect(g).connect(a.destination); src.start(); voiceSrc = src;
+    };
+    if (VOICE_BUF[name]) go(VOICE_BUF[name]); else loadVoice(name).then(go);
+  };
+  /** 提前解码，避免第一次播放时延迟 */
+  FX.preloadVoices = names => { if (unlocked) names.forEach(loadVoice); else window.addEventListener('pointerdown', () => setTimeout(() => names.forEach(loadVoice), 50), { once: true }); };
+
   NW.FX = FX;
 })(window);

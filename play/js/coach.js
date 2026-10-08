@@ -138,7 +138,7 @@
     { key: 'energy', when: c => c.mine && c.me.energy > 0, target: '#orb-energy', text: '你有奶劲 {e}！点击你的牌库或奶劲按钮，每点奶劲多抽 1 张牌。' },
     { key: 'statueHand', when: c => c.mine && (c.me.hand || []).some(u => c.card(u).type === 'statue'), target: '#hand .card.t-statue', text: '手里有雕塑牌：打出后它会一直留在场上，从你下回合开始每回合生效。最多 3 座，满了再打需要替换一座。' },
     { key: 'taunt', when: c => c.mine && c.me.power > 0 && c.op.statues.some(s => c.card(s.uid).taunt), target: '#statues-op .card.taunt', text: '对手有「嘲讽」雕塑：它在场时不能攻击本体，必须先一次付出等于耐久的奶之力把它击碎。' },
-    { key: 'scrap', when: c => c.mine && c.me.played.some(u => c.card(u).scrap), target: '#playcards .badge.scrap', text: '这张牌可以「献祭」：点击「献祭」并确认，把它永久移出游戏，换取一次性效果。' },
+    { key: 'scrap', when: c => c.mine && c.me.played.some(u => c.card(u).scrap), target: '#playcards .badge.scrap', text: '这张牌可以「献祭」：点击「献祭」并确认，把它送进删牌区，换取一次性效果。' },
     { key: 'choice', when: c => c.v.pending && c.v.pending.seat === c.seat, target: '#pending', text: '需要你做一个选择：点击高亮的牌，或者在横幅上选择其他区域 / 跳过。' },
     { key: 'shield', when: c => c.v.seats.some(s => s.shield > 0), target: '.hero.shielded .portrait', text: '奶壳会挡住对本体的伤害，持续到拥有者的下个回合开始。对手有奶壳时，可以考虑先拆他的雕塑。' },
     { key: 'elite', when: c => c.mine && c.me.coin >= 5 && document.querySelector('#market .card.elite:not(.cant-afford)'), target: '#market .card.elite:not(.cant-afford)', text: '精英招募：买价格 5 及以上的牌时，会获得 1 次删牌机会。删掉起始的普通奶娃，好牌会更常被抽到。' },
@@ -146,7 +146,8 @@
     { key: 'statusHand', when: c => c.mine && (c.me.hand || []).some(u => c.card(u).type === 'status'), target: '#hand .card.t-status', text: '状态牌分三类：「增益」强化本回合之后打出的牌（先打它）；「守势」持续到你下回合开始，在对手回合保护你；「蓄势」把资源留到下回合。卡面类型栏会写明是哪一类。' },
     { key: 'guardOpp', when: c => c.mine && (c.op.guards || []).length > 0, target: '#hero-op .tag.guard', text: '对手处于「守势」：惊鸿一瞥让他每回合最多失去 6 点生命，榴莲刺让你每次攻击他本体时自己受伤。多出来的奶之力可以拿去拆雕塑，或者用「破壳」「憋笑」安排进攻时机。' },
     { key: 'curse', when: c => c.me.incomingDiscard > 0, target: '#hero-me .tag.warn', text: '你受到了压制：下回合开始时需要弃掉一张手牌。' },
-    { key: 'limbo', when: c => c.me.limbo && c.me.limbo.uid, target: '#limbo', text: '西格奶把这张牌放进了删牌区：回合结束时它会被永久删除，在那之前可以点「撤回」。' },
+    { key: 'limbo', when: c => c.me.limbo && c.me.limbo.uid, target: '#limbo', text: '西格奶把这张牌放进了待删区：回合结束时它会进入你的删牌区，在那之前可以点「撤回」。' },
+    { key: 'trashZone', when: c => c.mine && (c.me.trash || []).length > 0, target: '#trash-me', text: '这回合删掉或献祭的牌放在右下角的「删牌区」，回合结束时永久删除。在那之前，「根本没有这样的奶蛙」「思考奶蛙」可以把其中一张放回弃牌堆——先献祭曾经的王拆雕塑，再打出取回牌，王下次还能再来。' },
     { key: 'market', when: c => c.mine && c.me.coin >= 2 && !(c.me.hand || []).length, target: '#market', text: '手牌打完了。用奶蛋点击市场里的牌购买，最左边的「跑腿奶蛙」永远有货。' },
   ];
   function checkHints() {
