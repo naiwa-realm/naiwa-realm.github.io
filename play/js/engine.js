@@ -24,7 +24,7 @@
   const NW = root.NW = root.NW || {};
   if (typeof require === 'function' && !NW.CARDS) { try { Object.assign(NW, require('./cards.js')); } catch (e) { /* 浏览器环境 */ } }
 
-  const ENGINE_VERSION = 6;
+  const ENGINE_VERSION = 7;
   const DEFAULT_RULES = {
     hp: 30,                // 初始生命
     handSize: 5,           // 每回合抽牌数
@@ -35,7 +35,7 @@
     permanent: ['errand'], // 常驻市场
     pool: null,            // null = NW.DEFAULT_POOL
     turnLimit: 0,          // 0 = 不限
-    eliteTrashCost: 5,     // 招募基础价格 ≥ 此值的牌时，可删除手牌或弃牌堆中 1 张牌（0 = 关闭）
+    eliteTrashCost: 5,     // 招募基础价格 ≥ 此值的牌时，获得 1 次删牌机会（0 = 关闭）
     buyTo: 'discard',
     marketTrashCost: 4,    // 删牌机会也可以用来移除市场中价格 ≤ 此值的牌（0 = 不允许）      // 购入的牌去向：'discard' 弃牌堆 | 'deck' 洗入抽牌堆 | 'top' 抽牌堆顶
   };
@@ -285,7 +285,10 @@
   }
   function trashTargets(state, seat, op) {
     const p = state.seats[seat], out = [];
-    for (const z of op.from.includes('played') ? op.from : op.from.concat('played')) for (const u of (p[z] || [])) out.push({ uid: u, zone: z }); // 出牌区的牌也能删
+    // 规则：删牌不能删手牌；可以删出牌区已打出的牌和自己场上的雕塑
+    const zones = op.from.filter(z => z !== 'hand'); if (!zones.includes('played')) zones.push('played');
+    for (const z of zones) for (const u of (p[z] || [])) out.push({ uid: u, zone: z });
+    for (const s of p.statues) out.push({ uid: s.uid, zone: 'statues' });
     if (op.market) for (const u of state.market) if (u && card(state, u).cost <= op.market) out.push({ uid: u, zone: 'market' });
     return out;
   }
@@ -313,7 +316,7 @@
     const p = state.seats[c.seat];
     switch (c.kind) {
       case 'discard': return p.hand.slice();
-      case 'trash': return [].concat(c.from.includes('hand') ? p.hand : [], c.from.includes('discard') ? p.discard : []);
+      case 'trash': return c.from.includes('discard') ? p.discard.slice() : [];
       case 'sigma': return [].concat(p.hand, p.deck);
       case 'destroyStatue': return state.seats[other(c.seat)].statues.filter(s => s.hp <= c.maxHp).map(s => s.uid);
       case 'marketTrash': return state.market.filter(u => u && card(state, u).cost <= c.maxCost);
@@ -597,12 +600,14 @@
           ev(state, { t: 'marketChurn', slot: i, old: t.uid, uid: state.market[i], by: seat });
           log(state, seat, `${p.name} 从市场移除了 ${name}`);
         } else {
-          p[t.zone].splice(p[t.zone].indexOf(t.uid), 1); toTrash(state, seat, t.uid); p.stats.trashed++; noteTrash(state, seat, t.uid);
+          if (t.zone === 'statues') p.statues.splice(p.statues.findIndex(s => s.uid === t.uid), 1);
+          else p[t.zone].splice(p[t.zone].indexOf(t.uid), 1);
+          toTrash(state, seat, t.uid); p.stats.trashed++; noteTrash(state, seat, t.uid);
           if (t.zone === 'played' && card(state, t.uid).type === 'status') { const k = p.status.indexOf(state.cards[t.uid]); if (k >= 0) p.status.splice(k, 1); }
           ev(state, { t: 'trash', seat, uid: t.uid, from: t.zone });
           const gates = p.status.filter(x => NW.CARDS[x].passive === 'gate').length;
           if (gates) { gain(state, seat, 'coin', gates, { src: t.uid, phase: 'gate' }); ev(state, { t: 'passive', seat, kind: 'gate', uid: t.uid }); }
-          log(state, seat, `${p.name} 删除了${{ deck: '抽牌堆中的', hand: '手牌中的', played: '出牌区的', discard: '弃牌堆中的' }[t.zone] || ''} ${name}`);
+          log(state, seat, `${p.name} 删除了${{ deck: '抽牌堆中的', hand: '手牌中的', played: '出牌区的', statues: '场上的雕塑', discard: '弃牌堆中的' }[t.zone] || ''} ${name}`);
         }
         break;
       }

@@ -775,9 +775,11 @@ img{-webkit-user-drag:none;user-select:none}
 /* 头像外圈：奶壳（蓝，带角标）/ 伤害上限（红，内圈）/ 反伤（紫，外圈） */
 .hero-fx{position:absolute;left:10px;top:4px;width:96px;height:96px;pointer-events:none;z-index:3}
 .hero-fx i{position:absolute;border-radius:50%;opacity:0;transition:opacity .25s,transform .25s;transform:scale(.85);pointer-events:auto}
-.hero-fx .r-shield{inset:-3px;border:3px solid #bfe3ff;box-shadow:0 0 12px #9fd0ffcc,inset 0 0 14px #9fd0ff88;animation:shieldPulse 2.4s ease-in-out infinite}
+.hero-fx .r-shield{inset:-3px;border:3px solid #bfe3ff;box-shadow:0 0 12px #9fd0ffcc,inset 0 0 14px #9fd0ff88}
+.hero-fx.has-shield .r-shield{animation:shieldPulse 2.4s ease-in-out infinite}
 .hero-fx .r-cap{inset:6px;border:3px solid #ff5a5a;box-shadow:0 0 8px #ff3a3acc,inset 0 0 8px #ff5a5a88}
-.hero-fx .r-thorns{inset:-17px;border:3px dashed #b678ff;box-shadow:0 0 12px #a05cffcc;animation:thornSpin 14s linear infinite}
+.hero-fx .r-thorns{inset:-17px;border:3px dashed #b678ff;box-shadow:0 0 12px #a05cffcc}
+.hero-fx.has-thorns .r-thorns{animation:thornSpin 14s linear infinite}
 .hero-fx.has-shield .r-shield,.hero-fx.has-cap .r-cap,.hero-fx.has-thorns .r-thorns{opacity:1;transform:none}
 .hero-fx.has-thorns .r-thorns{transform:none}
 @keyframes thornSpin{to{rotate:360deg}}
@@ -790,7 +792,9 @@ img{-webkit-user-drag:none;user-select:none}
 /* 破壳：炸开 */
 .hero-fx i.burst{animation:ringBurst .55s cubic-bezier(.2,.9,.3,1) forwards!important;border-style:dotted;border-width:5px}
 @keyframes ringBurst{0%{opacity:1;transform:scale(1)}40%{opacity:1;transform:scale(1.25)}100%{opacity:0;transform:scale(1.9);filter:blur(2px)}}
-/* 手牌上的「删」按钮（有删牌机会时） */
+/* 手牌上的「删」按钮（有删牌机会时）；离开手牌的牌（出牌区、动画残影等）一律不显示 */
+.card .hand-trash{display:none}
+#hand .card .hand-trash{display:block}
 #hand .card .hand-trash{position:absolute;right:-8px;top:-10px;width:34px;height:34px;border-radius:50%;border:2px solid #fff;background:radial-gradient(circle at 35% 30%,#ff9a8a,#d8402a 60%,#7a1a10);color:#fff;font:400 17px/1 var(--display);box-shadow:0 0 10px #ff5a3acc,0 2px 6px #000a;cursor:pointer;z-index:20;pointer-events:auto}
 #hand .card .hand-trash:hover{transform:scale(1.12)}
 #viewport.touch #hand .card .hand-trash{width:44px;height:44px;font-size:21px}

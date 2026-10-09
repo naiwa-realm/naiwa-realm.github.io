@@ -326,7 +326,7 @@
       <h3>奶壳</h3>
       <p class="rich-text">${f('{s} 奶壳')}：躺平派的防御资源。吸收对你本体的伤害，持续到你下个回合开始时消失，不能累积到之后的回合；雕塑不受保护。<b>奶蛋守护者</b>能把对手回合里没用掉的奶壳，在你下回合开始时换成等量奶蛋。</p>
       <h3>献祭与删牌</h3>
-      <p><b>献祭</b>：部分牌打出后，可点击出牌区中的「献祭」把它送进删牌区，换取一次性效果。<br><b>删牌机会</b>：奶蛋守护者（联动）、奶门的世界、西格奶，以及<b>精英招募</b>（招募价格 5 及以上的牌）会给你 1 次删牌机会。点击出牌区右侧的「选择要删的牌」，挑一张并确认：可删手牌或弃牌堆中的牌（西格奶还能删抽牌堆），也可以移除市场中价格 ≤ 4 的牌换一张新的。删牌机会在回合结束时失效，不会被误点触发。</p>
+      <p><b>献祭</b>：部分牌打出后，可点击出牌区中的「献祭」把它送进删牌区，换取一次性效果。<br><b>删牌机会</b>：奶蛋守护者（联动）、奶门的世界、西格奶，以及<b>精英招募</b>（招募价格 5 及以上的牌）会给你 1 次删牌机会。点击出牌区右侧的「选择要删的牌」，挑一张并确认：可删弃牌堆、出牌区（本回合已打出的牌）和自己场上的雕塑（西格奶还能删抽牌堆），<b>不能删手牌</b>；也可以移除市场中价格 ≤ 4 的牌换一张新的。删牌机会在回合结束时失效，不会被误点触发。</p>
       <h3>删牌区</h3>
       <p>每位玩家在桌边都有一个<b>删牌区</b>（你的在右下角，对手的在右上角牌库旁边），本回合删掉和献祭的牌都先放在这里，公开可见。<b>回合结束时删牌区清空</b>，里面的牌永久移出游戏。在那之前，带「取回」效果的牌会给你 1 次<b>取回机会</b>（删牌区出现「取回」角标），回合结束前随时点删牌区，选其中一张<b>放回弃牌堆</b>：<b>根本没有这样的奶蛙</b>（嘴硬帮）可取回任意一张——献祭曾经的王拆掉雕塑后把王取回来，下次还能再拆；<b>思考奶蛙</b>（躺平派）可取回一张费用 ≤ 4 的牌。删牌机会也可以删除出牌区里已经打出的牌。</p>
       <h3>操作</h3>
@@ -393,13 +393,14 @@
     const v = UI.view, me = v.seats[UI.viewer], ops = me.trashOps || [];
     if (!ops.length) return S.close();
     const op = ops[0];
-    const name = { hand: '手牌', played: '出牌区', discard: '弃牌堆', deck: '抽牌堆', market: '市场' };
-    const zones = op.from.slice(); if (!zones.includes('played')) zones.splice(1, 0, 'played'); if (op.market) zones.push('market');
-    zone = zones.includes(zone) ? zone : (zones.includes('hand') && (me.hand || []).length ? 'hand' : zones.includes('discard') && me.discard.length ? 'discard' : zones[0]);
-    const list = z => z === 'hand' ? (me.hand || []) : z === 'played' ? me.played : z === 'discard' ? me.discard : z === 'deck' ? (me.deckChoices || []) : v.market.filter(u => u && CARDS[v.cards[u]].cost <= op.market);
+    const name = { played: '出牌区', statues: '我的雕塑', discard: '弃牌堆', deck: '抽牌堆', market: '市场' };
+    // 规则：不能删手牌；出牌区、自己的雕塑总是可以删
+    const zones = ['discard', 'played', 'statues'].concat(op.from.includes('deck') ? ['deck'] : []); if (op.market) zones.push('market');
+    const list = z => z === 'played' ? me.played : z === 'statues' ? me.statues.map(s => s.uid) : z === 'discard' ? me.discard : z === 'deck' ? (me.deckChoices || []) : v.market.filter(u => u && CARDS[v.cards[u]].cost <= op.market);
+    zone = zones.includes(zone) ? zone : (zones.find(z => list(z).length) || zones[0]);
     const cards = list(zone);
     S.modal(`<div class="eyebrow">删牌机会 ×${ops.length}</div><h2>选择要删除的牌</h2>
-      <p>被删除的牌先进入你的删牌区（右下角），回合结束时永久移出游戏；本回合内可以用「取回」放回弃牌堆。删掉起始的「普通奶娃」能让好牌更常被抽到；也可以移除市场里价格 ≤ ${op.market} 的牌，换一张新的上来。出牌区里已经打出的牌也可以删。删牌机会在回合结束时失效。</p>
+      <p>被删除的牌先进入你的删牌区（右下角），回合结束时永久移出游戏；本回合内可以用「取回」放回弃牌堆。删掉起始的「普通奶娃」能让好牌更常被抽到（手牌不能删，可以删弃牌堆、本回合打出的牌，或自己场上的雕塑）；也可以移除市场里价格 ≤ ${op.market} 的牌，换一张新的上来。出牌区里已经打出的牌也可以删。删牌机会在回合结束时失效。</p>
       <div class="tabs">${zones.map(z => `<button data-tp-zone="${z}" class="${z === zone ? 'on' : ''}">${name[z]} · ${list(z).length}</button>`).join('')}</div>
       <div class="grid-cards">${cards.length ? cards.map(u => NW.UI.cardHTML(v.cards[u], `data-tp-card="${u}" data-tp-zone-of="${zone}"`).replace('class="card', `class="card${u === sel ? ' tp-sel' : ''}`)).join('') : '<p>这里没有可以删除的牌</p>'}</div>
       <div class="row-btns">${sel ? `<button class="btn big gold" data-tp-confirm="${sel}">确认删除「${esc(CARDS[v.cards[sel]].name)}」</button>` : '<span style="font-size:13px;color:#cfd6be">先点一张牌</span>'}<button class="btn big ghost" data-close>暂不使用</button></div>`, 'picker-trash');

@@ -184,8 +184,9 @@
     const v = UI.view; if (!v) return;
     renderTop(v); renderHero('me', UI.viewer); renderHero('op', 1 - UI.viewer);
     renderStatues('me', UI.viewer); renderStatues('op', 1 - UI.viewer);
+    renderLimbo(v); // 先定好右侧面板，出牌区才能算出可用宽度
     renderPlay(v); renderMarket(v); renderHand(v); renderOppHand(v); renderPiles(v);
-    renderResources(); renderPending(v); renderButtons(v); renderTicker(v); renderMission(v); renderLimbo(v);
+    renderResources(); renderPending(v); renderButtons(v); renderTicker(v); renderMission(v);
   };
 
   function el(uid) {
@@ -197,7 +198,9 @@
   const HAND_ONLY = ['ally-ready', 'playable', 'unplayable', 'selectable'];
   function place(container, uids, wrap) {
     const want = uids.map(u => el(u));
-    if (container.id !== 'hand') want.forEach(e => e.classList.remove(...HAND_ONLY));
+    if (container.id !== 'hand') want.forEach(e => { e.classList.remove(...HAND_ONLY); const tb = e.querySelector('.hand-trash'); if (tb) tb.remove(); }); // 「删」按钮只属于手牌
+    // 叠放时给牌加了内联位置；牌离开叠放（进手牌、平铺等）后必须清掉，否则会停在错误的位置
+    if (!container.classList.contains('ps-cards')) want.forEach(e => { if (e.style.left || e.style.top || e.style.zIndex) e.style.left = e.style.top = e.style.zIndex = ''; });
     const current = Array.from(container.children).filter(c => c.dataset && c.dataset.uid);
     current.forEach(c => { if (!want.includes(c)) c.remove(); });
     want.forEach((e, i) => { if (container.children[i] !== e) container.insertBefore(e, container.children[i] || null); });
@@ -299,11 +302,23 @@
   }
 
   /** 出牌区分组：超过 5 张时叠放。触发了联动的牌总在表面，其余较早的牌先进叠放 */
+  /** 出牌区一排能平铺几张：按当前设备上出牌区的实际宽度和卡牌宽度算 */
+  UI.playCapacity = () => {
+    const box = $('#playcards'); let W = box && box.clientWidth ? box.clientWidth : 1000;
+    // 右侧的删牌机会 / 待删面板出现时会盖住出牌区右端；牌是居中排的，所以两边都要让出这段宽度
+    if (box && box.clientWidth) {
+      const br = box.getBoundingClientRect(), k = br.width / box.clientWidth || 1;
+      for (const id of ['trashOps', 'limbo']) { const pn = $('#' + id); if (!pn || !pn.offsetParent || (id === 'limbo' && !pn.classList.contains('on'))) continue; const r = pn.getBoundingClientRect(); if (r.width && r.left < br.right) W -= 2 * (br.right - r.left + 6) / k; }
+    }
+    const c = box && Array.from(box.children).find(e => e.classList && e.classList.contains('card'));
+    const cw = c && c.offsetWidth ? c.offsetWidth : 86, gap = 8, stackW = 148;
+    return { all: Math.max(2, Math.floor((W + gap) / (cw + gap))), withStack: Math.max(1, Math.floor((W - stackW + gap) / (cw + gap))) };
+  };
   UI.playSplit = owner => {
-    const MAXV = 5, pl = owner.played, done = owner.allyDone || {};
-    if (pl.length <= MAXV) return { stackU: [], showU: pl };
+    const cap = UI.playCapacity(), pl = owner.played, done = owner.allyDone || {};
+    if (pl.length <= cap.all) return { stackU: [], showU: pl };
     const lit = pl.filter(u => done[u]), rest = pl.filter(u => !done[u]);
-    const keepRest = Math.max(0, (MAXV - 1) - lit.length);
+    const keepRest = Math.max(0, cap.withStack - lit.length);
     const restShown = new Set(keepRest ? rest.slice(-keepRest) : []);
     const show = new Set(lit.concat([...restShown]));
     return { stackU: pl.filter(u => !show.has(u)), showU: pl.filter(u => show.has(u)) };
@@ -323,7 +338,7 @@
       stack.classList.toggle('has-scrap', scrapReady);
       stack.querySelector('.ps-tip').textContent = scrapReady ? '点开献祭' : '点开查看';
     } else if (stack) stack.remove();
-    const shown = place(box, showU); shown.forEach(c => { c.style.left = c.style.top = c.style.zIndex = ''; });
+    const shown = place(box, showU);
     // 联动牌太多、平铺放不下时，收紧间距（必要时互相压一点边）
     const room = box.clientWidth - (stackU.length ? 148 : 0), need = showU.length * 86;
     box.style.gap = showU.length > 1 && need + 8 * (showU.length - 1) > room ? Math.max(-50, (room - need) / (showU.length - 1)) + 'px' : '';
@@ -396,7 +411,7 @@
     const total = cw + gap * (n - 1), x0 = (W - total) / 2;
     const presence = new Set(s.played.concat(s.statues.map(x => x.uid)).map(u => CARDS[v.cards[u]].faction));
     const pd = v.pending;
-    const canTrashHand = myTurn() && !(s.limbo && s.limbo.uid) && (s.trashOps || []).some(o => o.from.includes('hand'));
+    const canTrashHand = false; // 规则：删牌不能删手牌
     cards.forEach((e, i) => {
       const off = i - (n - 1) / 2;
       e.style.setProperty('--x', (x0 + gap * i) + 'px');
@@ -589,7 +604,7 @@
     t.classList.toggle('on', on);
     if (on) {
       $('#trashOpsN').textContent = `删牌机会 ×${ops.length}`;
-      const zones = Array.from(new Set(['played'].concat(...ops.map(o => o.from)))).map(z => ({ hand: '手牌', discard: '弃牌堆', deck: '抽牌堆', played: '出牌区' }[z]));
+      const zones = ['弃牌堆', '出牌区', '自己的雕塑'].concat(ops.some(o => o.from.includes('deck')) ? ['抽牌堆'] : []);
       const mk = Math.max(...ops.map(o => o.market || 0));
       t.querySelector('small').textContent = `本回合内有效，可删${zones.join('、')}${mk ? `，或移除市场中价格 ≤ ${mk} 的牌` : ''}`;
     }
@@ -1176,7 +1191,7 @@
     if (c.type === 'status') { const k = NW.STATUS_KINDS[c.kind || 'buff']; bits.push(`<b>状态·${k.name}</b>：${k.desc}${c.passive === 'hold' ? '' : ''}`); }
     if (c.guard) bits.push(`<b>守势效果</b>：${guardDesc(id)}，持续到你下个回合开始。`);
     if (JSON.stringify(c.ally || []).includes('pierce')) bits.push('<b>破壳</b>：攻击对手本体时，伤害不会被奶壳吸收。');
-    const et = UI.view && UI.view.rules.eliteTrashCost; if (et && !c.permanent && c.cost >= et && card.closest('#market')) bits.push(`<b>精英招募</b>：招募这张牌时，可删除手牌或弃牌堆中的 1 张牌。`);
+    const et = UI.view && UI.view.rules.eliteTrashCost; if (et && !c.permanent && c.cost >= et && card.closest('#market')) bits.push(`<b>精英招募</b>：招募这张牌时，获得 1 次删牌机会（弃牌堆、出牌区或自己的雕塑，不能删手牌）。`);
     if (card.closest('#market') || card.closest('#errandSlot')) { const f = c.faction; if (f !== 'neutral') bits.push(`你的牌组里已有 ${countFaction(UI.viewer, f)} 张${FACTIONS[f].name}牌。`); }
     return bits.join('<br>');
   }

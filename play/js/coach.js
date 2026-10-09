@@ -142,7 +142,7 @@
     { key: 'choice', when: c => c.v.pending && c.v.pending.seat === c.seat, target: '#pending', text: '需要你做一个选择：点击高亮的牌，或者在横幅上选择其他区域 / 跳过。' },
     { key: 'shield', when: c => c.v.seats.some(s => s.shield > 0), target: '.hero.shielded .portrait', text: '奶壳会挡住对本体的伤害，持续到拥有者的下个回合开始。对手有奶壳时，可以考虑先拆他的雕塑。' },
     { key: 'elite', when: c => c.mine && c.me.coin >= 5 && document.querySelector('#market .card.elite:not(.cant-afford)'), target: '#market .card.elite:not(.cant-afford)', text: '精英招募：买价格 5 及以上的牌时，会获得 1 次删牌机会。删掉起始的普通奶娃，好牌会更常被抽到。' },
-    { key: 'trashOp', when: c => c.mine && (c.me.trashOps || []).length > 0, target: '#trashOps', text: '你获得了删牌机会！点「选择要删的牌」，挑一张并确认删除。也可以移除市场里价格不高、你不想要的牌。回合结束前用掉，否则失效。' },
+    { key: 'trashOp', when: c => c.mine && (c.me.trashOps || []).length > 0, target: '#trashOps', text: '你获得了删牌机会！点「选择要删的牌」，从弃牌堆、本回合打出的牌或自己的雕塑里挑一张确认删除（手牌不能删）。也可以移除市场里价格不高、你不想要的牌。回合结束前用掉，否则失效。' },
     { key: 'statusHand', when: c => c.mine && (c.me.hand || []).some(u => c.card(u).type === 'status'), target: '#hand .card.t-status', text: '状态牌分三类：「增益」强化本回合之后打出的牌（先打它）；「守势」持续到你下回合开始，在对手回合保护你；「蓄势」把资源留到下回合。卡面类型栏会写明是哪一类。' },
     { key: 'guardOpp', when: c => c.mine && (c.op.guards || []).length > 0, target: '#hero-op .tag.guard', text: '对手处于「守势」：惊鸿一瞥让他每回合最多失去 6 点生命，榴莲刺让你每次攻击他本体时自己受伤。多出来的奶之力可以拿去拆雕塑，或者用「破壳」「憋笑」安排进攻时机。' },
     { key: 'curse', when: c => c.me.incomingDiscard > 0, target: '#hero-me .tag.warn', text: '你受到了压制：下回合开始时需要弃掉一张手牌。' },
