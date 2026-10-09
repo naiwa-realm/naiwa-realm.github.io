@@ -244,7 +244,7 @@
           <div class="field"><label>玩家一（先手）</label><input id="hsA" value="玩家一" maxlength="8"></div>
           <div class="field"><label>玩家二</label><input id="hsB" value="玩家二" maxlength="8"></div>
           <div class="row-btns"><button class="btn big gold" data-hotseat>开始对战</button></div></div>
-        <div class="panel"><h3>联机对战 <span class="mode-chip">测试版</span></h3><p>点对点直连：两台设备各复制一次连接码（用微信发就行），不需要服务器。同一 Wi-Fi / 热点、同一个国家选「直连」；<b>跨国</b>选「Radmin 跨国」：两人都开 Radmin VPN 进同一个网络，填上自己的 Radmin 地址。请用浏览器打开游戏页面（在 Claude 内预览时无法直连）。</p>
+        <div class="panel"><h3>联机对战 <span class="mode-chip">测试版</span></h3><p>点对点直连：两台设备各复制一次连接码（用微信发就行），不需要服务器。同一 Wi-Fi / 热点、同一个国家选「直连」；<b>跨国</b>选「Radmin 跨国」：两人都开 Radmin VPN 进同一个网络，填上自己的 Radmin 地址。</p>
           <div class="field"><label>你的名字</label><input id="netName" value="${esc(name)}" maxlength="8"></div>
           <div class="field"><label>连接方式</label><input type="hidden" id="netKind" value="${S.netMode || 'rtc'}">
             <div class="seg" id="netSeg">${[['rtc', '直连', '同国家 / 同 Wi-Fi'], ['radmin', 'Radmin 跨国', '两人都开 Radmin'], ['bc', '本地测试', '同一浏览器两个标签页']].map(([k, a, b]) => `<button type="button" class="seg-b${(S.netMode || 'rtc') === k ? ' on' : ''}" data-netmode="${k}"><b>${a}</b><small>${b}</small></button>`).join('')}</div></div>
@@ -328,7 +328,7 @@
       <h3>献祭与删牌</h3>
       <p><b>献祭</b>：部分牌打出后，可点击出牌区中的「献祭」把它送进删牌区，换取一次性效果。<br><b>删牌机会</b>：奶蛋守护者（联动）、奶门的世界、西格奶，以及<b>精英招募</b>（招募价格 5 及以上的牌）会给你 1 次删牌机会。点击出牌区右侧的「选择要删的牌」，挑一张并确认：可删手牌或弃牌堆中的牌（西格奶还能删抽牌堆），也可以移除市场中价格 ≤ 4 的牌换一张新的。删牌机会在回合结束时失效，不会被误点触发。</p>
       <h3>删牌区</h3>
-      <p>每位玩家在桌边都有一个<b>删牌区</b>（你的在右下角，对手的在右上角牌库旁边），本回合删掉和献祭的牌都先放在这里，公开可见。<b>回合结束时删牌区清空</b>，里面的牌永久移出游戏。在那之前，带「取回」效果的牌可以把其中一张<b>放回弃牌堆</b>：<b>根本没有这样的奶蛙</b>（嘴硬帮）取回任意一张——先献祭曾经的王拆掉雕塑，再打出它把王放回弃牌堆，下次还能再拆；<b>思考奶蛙</b>（躺平派）取回一张费用 ≤ 4 的牌。所以取回牌要在删牌、献祭之后再打。</p>
+      <p>每位玩家在桌边都有一个<b>删牌区</b>（你的在右下角，对手的在右上角牌库旁边），本回合删掉和献祭的牌都先放在这里，公开可见。<b>回合结束时删牌区清空</b>，里面的牌永久移出游戏。在那之前，带「取回」效果的牌会给你 1 次<b>取回机会</b>（删牌区出现「取回」角标），回合结束前随时点删牌区，选其中一张<b>放回弃牌堆</b>：<b>根本没有这样的奶蛙</b>（嘴硬帮）可取回任意一张——献祭曾经的王拆掉雕塑后把王取回来，下次还能再拆；<b>思考奶蛙</b>（躺平派）可取回一张费用 ≤ 4 的牌。删牌机会也可以删除出牌区里已经打出的牌。</p>
       <h3>操作</h3>
       <p>拖动手牌到牌桌中央打出（或直接点击）· 按住「奶之力」拖出箭头瞄准 · 点击市场的牌购买 · 右键（手机上长按）任意卡牌查看详情<br>快捷键：<b>空格</b> 全部打出 · <b>E</b> 结束回合 · <b>D</b> 消耗奶劲抽牌 · <b>Esc</b> 取消</p>
       <p>新手建议从「奶国远征」第一章开始，前三关有教官一步步带你操作。</p>
@@ -355,7 +355,7 @@
       ${c.cost ? `<p>价格：${c.cost} 奶蛋</p>` : '<p>起始牌</p>'}
       ${c.ally ? `<p><b>联动</b>：本回合你已打出另一张${FACTIONS[c.faction].name}的牌，或场上有${FACTIONS[c.faction].name}雕塑时自动触发。</p>` : ''}
       ${c.scrap ? '<p><b>献祭</b>：打出后可在出牌区点击「献祭」，把这张牌送进删牌区并获得效果。</p>' : ''}
-      ${JSON.stringify(c.play || []).includes('recall') ? '<p><b>取回</b>：从你本回合的删牌区（这回合删掉或献祭的牌）选 1 张放回弃牌堆；所以要先删牌或献祭，再打出这张牌。删牌区为空时可以跳过。</p>' : ''}
+      ${JSON.stringify(c.play || []).includes('recall') ? '<p><b>取回</b>：打出后获得 1 次取回机会，删牌区会出现「取回」角标。回合结束前随时点删牌区，从本回合删掉或献祭的牌里选 1 张放回弃牌堆；不用也可以。</p>' : ''}
       ${c.type === 'statue' ? `<p><b>雕塑</b>：耐久 ${c.hp}${c.taunt ? '，嘲讽' : ''}。从你的下个回合开始生效。</p>` : ''}
       </div></div>`);
   };
@@ -368,7 +368,7 @@
   S.pileViewer = (UI, kind) => {
     const v = UI.view, me = v.seats[UI.viewer], op = v.seats[1 - UI.viewer];
     let ids, title, note;
-    if (kind === 'deck') { ids = me.deckList || []; title = `你的抽牌堆 · ${ids.length} 张`; note = '只显示构成（已按名称排序），不代表抽牌顺序。'; }
+    if (kind === 'deck') { ids = me.deckList || []; title = `你的抽牌堆 · ${ids.length} 张`; note = '只显示构成，不代表抽牌顺序。'; }
     else if (kind === 'discard') { ids = me.discard.map(u => v.cards[u]); title = `你的弃牌堆 · ${ids.length} 张`; note = '打出的牌在回合结束后进入这里；被击碎或替换的雕塑也会进入这里。'; }
     else if (kind === 'trash') { ids = (me.trash || []).map(u => v.cards[u]); title = `你的删牌区 · ${ids.length} 张`; note = '本回合删掉和献祭的牌。回合结束时清空，里面的牌永久移出游戏；在那之前，「根本没有这样的奶蛙」「思考奶蛙」可以把其中一张放回弃牌堆。'; }
     else if (kind === 'oppTrash') { ids = (op.trash || []).map(u => v.cards[u]); title = `${op.name} 的删牌区 · ${ids.length} 张`; note = '对手本回合删掉和献祭的牌，公开可见。'; }
@@ -393,17 +393,43 @@
     const v = UI.view, me = v.seats[UI.viewer], ops = me.trashOps || [];
     if (!ops.length) return S.close();
     const op = ops[0];
-    const name = { hand: '手牌', discard: '弃牌堆', deck: '抽牌堆', market: '市场' };
-    const zones = op.from.slice(); if (op.market) zones.push('market');
-    zone = zones.includes(zone) ? zone : (zones.includes('discard') && me.discard.length ? 'discard' : zones[0]);
-    const list = z => z === 'hand' ? (me.hand || []) : z === 'discard' ? me.discard : z === 'deck' ? (me.deckChoices || []) : v.market.filter(u => u && CARDS[v.cards[u]].cost <= op.market);
+    const name = { hand: '手牌', played: '出牌区', discard: '弃牌堆', deck: '抽牌堆', market: '市场' };
+    const zones = op.from.slice(); if (!zones.includes('played')) zones.splice(1, 0, 'played'); if (op.market) zones.push('market');
+    zone = zones.includes(zone) ? zone : (zones.includes('hand') && (me.hand || []).length ? 'hand' : zones.includes('discard') && me.discard.length ? 'discard' : zones[0]);
+    const list = z => z === 'hand' ? (me.hand || []) : z === 'played' ? me.played : z === 'discard' ? me.discard : z === 'deck' ? (me.deckChoices || []) : v.market.filter(u => u && CARDS[v.cards[u]].cost <= op.market);
     const cards = list(zone);
     S.modal(`<div class="eyebrow">删牌机会 ×${ops.length}</div><h2>选择要删除的牌</h2>
-      <p>被删除的牌先进入你的删牌区（右下角），回合结束时永久移出游戏；本回合内可以用「取回」放回弃牌堆。删掉起始的「普通奶娃」能让好牌更常被抽到；也可以移除市场里价格 ≤ ${op.market} 的牌，换一张新的上来。删牌机会在回合结束时失效。</p>
+      <p>被删除的牌先进入你的删牌区（右下角），回合结束时永久移出游戏；本回合内可以用「取回」放回弃牌堆。删掉起始的「普通奶娃」能让好牌更常被抽到；也可以移除市场里价格 ≤ ${op.market} 的牌，换一张新的上来。出牌区里已经打出的牌也可以删。删牌机会在回合结束时失效。</p>
       <div class="tabs">${zones.map(z => `<button data-tp-zone="${z}" class="${z === zone ? 'on' : ''}">${name[z]} · ${list(z).length}</button>`).join('')}</div>
       <div class="grid-cards">${cards.length ? cards.map(u => NW.UI.cardHTML(v.cards[u], `data-tp-card="${u}" data-tp-zone-of="${zone}"`).replace('class="card', `class="card${u === sel ? ' tp-sel' : ''}`)).join('') : '<p>这里没有可以删除的牌</p>'}</div>
       <div class="row-btns">${sel ? `<button class="btn big gold" data-tp-confirm="${sel}">确认删除「${esc(CARDS[v.cards[sel]].name)}」</button>` : '<span style="font-size:13px;color:#cfd6be">先点一张牌</span>'}<button class="btn big ghost" data-close>暂不使用</button></div>`, 'picker-trash');
     S._tpZone = zone;
+  };
+
+  /* 出牌区叠起来的那一摞：列出来，可以献祭 */
+  S.playStack = UI => {
+    const v = UI.view, owner = v.seats[v.active], mine = v.active === UI.viewer && UI.isHuman && UI.isHuman(UI.viewer);
+    const { stackU } = NW.UI.playSplit(owner);
+    if (!stackU.length) return S.close();
+    S.modal(`<div class="eyebrow">${esc(owner.name)} · 本回合出牌</div><h2>叠放的 ${stackU.length} 张牌</h2>
+      <p>出牌区放不下时，较早打出的牌会叠成一摞。${mine ? '带「献祭」的牌可以在这里献祭。' : ''}</p>
+      <div class="grid-cards stack-list">${stackU.map(u => { const c = CARDS[v.cards[u]], lit = owner.allyDone && owner.allyDone[u];
+        return `<div class="sl-item">${NW.UI.cardHTML(v.cards[u])}${c.ally ? `<small class="${lit ? 'lit' : ''}">${lit ? '已联动' : '未联动'}</small>` : ''}${mine && c.scrap ? `<button class="btn gold" data-stack-scrap="${u}">献祭</button>` : ''}</div>`; }).join('')}</div>
+      <div class="row-btns"><button class="btn big ghost" data-close>关闭</button></div>`, 'picker-trash');
+  };
+
+  /* 取回机会：点删牌区 → 选牌 → 确认（和删牌机会一样，回合结束前随时可用） */
+  S.recallPicker = (UI, sel) => {
+    const v = UI.view, me = v.seats[UI.viewer], ops = me.recallOps || [];
+    if (!ops.length) return S.close();
+    // 每张牌用「刚好够用」的那次机会（费用上限最小的），把宽的留给贵牌
+    const opFor = u => { const c = CARDS[v.cards[u]].cost || 0; let best = -1; ops.forEach((o, i) => { if (c <= o.maxCost && (best < 0 || o.maxCost < ops[best].maxCost)) best = i; }); return best; };
+    const cards = (me.trash || []).filter(u => opFor(u) >= 0);
+    const caps = ops.map(o => o.maxCost >= 99 ? '任意费用' : '费用 ≤ ' + o.maxCost);
+    S.modal(`<div class="eyebrow">取回机会 ×${ops.length}（${caps.join('、')}）</div><h2>从删牌区取回 1 张牌</h2>
+      <p>选中的牌放回你的弃牌堆，下次洗牌还能抽到。删牌区里是这回合删掉和献祭的牌，回合结束时清空；取回机会也在回合结束时失效，可以先删牌、献祭，再回来取。</p>
+      <div class="grid-cards">${cards.length ? cards.map(u => NW.UI.cardHTML(v.cards[u], `data-rc-card="${u}"`).replace('class="card', `class="card${u === sel ? ' tp-sel' : ''}`)).join('') : '<p>删牌区里还没有可以取回的牌。先删牌或献祭，再点删牌区。</p>'}</div>
+      <div class="row-btns">${sel ? `<button class="btn big gold" data-rc-confirm="${sel}" data-rc-op="${opFor(sel)}">确认取回「${esc(CARDS[v.cards[sel]].name)}」</button>` : (cards.length ? '<span style="font-size:13px;color:#cfd6be">先点一张牌</span>' : '')}<button class="btn big ghost" data-close>${cards.length ? '暂不使用' : '知道了'}</button></div>`, 'picker-trash');
   };
 
   S.rtcUi = {
@@ -483,6 +509,9 @@
       const pz = t.closest('[data-pick-zone]'); if (pz) return S.picker(NW.UI, pz.dataset.pickZone);
       const tz = t.closest('[data-tp-zone]'); if (tz) return S.trashPicker(NW.UI, tz.dataset.tpZone);
       const tc = t.closest('[data-tp-card]'); if (tc) return S.trashPicker(NW.UI, S._tpZone, tc.dataset.tpCard);
+      const ssb = t.closest('[data-stack-scrap]'); if (ssb) { S.close(); NW.UI.submit({ type: 'scrap', uid: ssb.dataset.stackScrap }); return; }
+      const rcc = t.closest('[data-rc-card]'); if (rcc) return S.recallPicker(NW.UI, rcc.dataset.rcCard);
+      const rcf = t.closest('[data-rc-confirm]'); if (rcf) { S.close(); NW.UI.submit({ type: 'useRecall', op: +rcf.dataset.rcOp, value: rcf.dataset.rcConfirm }); return; }
       const tf = t.closest('[data-tp-confirm]'); if (tf) { S.close(); NW.UI.submit({ type: 'useTrash', op: 0, value: tf.dataset.tpConfirm }); return; }
       const pk = t.closest('[data-pick]'); if (pk) { S.close(); NW.UI.submit({ type: 'choose', value: pk.dataset.pick }); return; }
       if (t.closest('[data-hotseat]')) return NW.Main.startHotseat($('#hsA').value.trim() || '玩家一', $('#hsB').value.trim() || '玩家二');

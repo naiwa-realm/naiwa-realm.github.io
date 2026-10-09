@@ -101,7 +101,8 @@
         this.history.push(action);
         this.onAction(action, res);
         this.busy = true;
-        try { await this.onUpdate(res.events, action, this); } finally { this.busy = false; }
+        // 动画出错不能让对局卡死：记下错误，继续下一步
+        try { await this.onUpdate(res.events, action, this); } catch (e) { console.error(e); } finally { this.busy = false; }
       }
     }
     stop() { this.stopped = true; this.controllers.forEach(c => c.cancel && c.cancel()); }

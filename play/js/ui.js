@@ -225,8 +225,8 @@
     h.style.setProperty('--hp', ratio);
     h.style.setProperty('--ringc', ratio > .5 ? '#7fe08a' : ratio > .25 ? '#ffc85a' : '#ff5a5a');
     h.classList.toggle('shielded', d.shield > 0);
+    renderHeroFx(h, s, seat, d);
     const tags = [];
-    if (d.shield) tags.push(`<span class="tag shield">奶壳 ${d.shield}</span>`);
     if (s.held) tags.push(`<span class="tag">憋住 ${s.held}✷</span>`);
     if (s.incomingDiscard) tags.push(`<span class="tag warn">下回合弃 ${s.incomingDiscard}</span>`);
     if (s.topdeck) tags.push('<span class="tag">下张购入置顶</span>');
@@ -242,6 +242,30 @@
       h.classList.toggle('blocked', canHit && taunt);
       h.title = taunt ? '对方有嘲讽雕塑，必须先击破' : canHit ? `点击攻击：造成 ${me().power} 点伤害` : '';
     }
+  }
+
+  /** 头像外圈：奶壳角标 + 蓝色壳圈；内圈红 = 有伤害上限；外圈紫 = 有反伤 */
+  function heroCap(s, seat) {
+    let cap = 0, why = [];
+    for (const g of s.guards || []) { const gc = (CARDS[g.id].guard || {}).cap; if (gc) { cap = cap ? Math.min(cap, gc) : gc; why.push(`${CARDS[g.id].name}：本回合最多失去 ${gc} 点生命`); } }
+    for (const m of UI.view.mutators || []) if (m.id === 'heroShield' && m.seat === seat) { const mx = (m.params || {}).max || 10; why.push(`奶壳护体：单次受到的伤害最多 ${mx} 点`); cap = cap ? Math.min(cap, mx) : mx; }
+    return { cap, why };
+  }
+  function renderHeroFx(h, s, seat, d) {
+    let fx = h.querySelector('.hero-fx');
+    if (!fx) { fx = document.createElement('div'); fx.className = 'hero-fx'; fx.innerHTML = '<i class="r-thorns"></i><i class="r-shield"></i><i class="r-cap"></i><span class="sh-badge"><b></b></span>'; h.appendChild(fx); }
+    const thorns = (s.guards || []).reduce((t, g) => t + ((CARDS[g.id].guard || {}).thorns || 0), 0), cap = heroCap(s, seat);
+    fx.classList.toggle('has-shield', d.shield > 0); fx.classList.toggle('has-cap', cap.cap > 0); fx.classList.toggle('has-thorns', thorns > 0);
+    fx.querySelector('.sh-badge b').textContent = d.shield;
+    fx.querySelector('.sh-badge').title = `奶壳 ${d.shield}：先吸收对本体的伤害，持续到${s.name}的下个回合开始`;
+    fx.querySelector('.r-cap').title = cap.why.join('\n');
+    fx.querySelector('.r-thorns').title = thorns ? `反伤 ${thorns}：对手每次攻击本体，自己受到 ${thorns} 点伤害` : '';
+  }
+  /** 圈的特效：反伤 = 虚化放大；破壳 = 炸开 */
+  function ringFx(seat, cls, anim) {
+    const h = $('#hero-' + (isMine(seat) ? 'me' : 'op')), fx = h && h.querySelector('.hero-fx'), r = fx && fx.querySelector('.' + cls);
+    if (!r) return;
+    const g = r.cloneNode(); g.classList.add(anim); g.style.opacity = 1; fx.appendChild(g); setTimeout(() => g.remove(), 900);
   }
 
   function guardDesc(id) { const g = CARDS[id].guard || {}; return g.cap ? `每回合最多失去 ${g.cap} 点生命` : g.thorns ? `对手每次攻击本体，自己受到 ${g.thorns} 点伤害` : ''; }
@@ -274,10 +298,36 @@
     slots.forEach((sl, i) => sl.classList.toggle('filled', i < s.statues.length));
   }
 
+  /** 出牌区分组：超过 5 张时叠放。触发了联动的牌总在表面，其余较早的牌先进叠放 */
+  UI.playSplit = owner => {
+    const MAXV = 5, pl = owner.played, done = owner.allyDone || {};
+    if (pl.length <= MAXV) return { stackU: [], showU: pl };
+    const lit = pl.filter(u => done[u]), rest = pl.filter(u => !done[u]);
+    const keepRest = Math.max(0, (MAXV - 1) - lit.length);
+    const restShown = new Set(keepRest ? rest.slice(-keepRest) : []);
+    const show = new Set(lit.concat([...restShown]));
+    return { stackU: pl.filter(u => !show.has(u)), showU: pl.filter(u => show.has(u)) };
+  };
   function renderPlay(v) {
     const owner = v.seats[v.active];
     const box = $('#playcards');
-    const cards = place(box, owner.played);
+    // 出牌太多时，较早的牌叠成一摞（点开可以查看 / 献祭），只平铺最近的几张
+    const { stackU, showU } = UI.playSplit(owner);
+    let stack = box.querySelector('.play-stack');
+    if (stackU.length) {
+      if (!stack) { stack = document.createElement('div'); stack.className = 'play-stack'; stack.innerHTML = '<div class="ps-cards"></div><span class="ps-n"></span><span class="ps-tip">点开查看</span>'; box.appendChild(stack); }
+      const inner = stack.querySelector('.ps-cards'); place(inner, stackU);
+      Array.from(inner.children).forEach((c, i) => { c.style.left = (i * Math.min(10, 40 / stackU.length)) + 'px'; c.style.top = (-i * 1.5) + 'px'; c.style.zIndex = i; });
+      stack.querySelector('.ps-n').textContent = '×' + stackU.length;
+      const scrapReady = isMine(v.active) && myTurn() && stackU.some(u => CARDS[v.cards[u]].scrap);
+      stack.classList.toggle('has-scrap', scrapReady);
+      stack.querySelector('.ps-tip').textContent = scrapReady ? '点开献祭' : '点开查看';
+    } else if (stack) stack.remove();
+    const shown = place(box, showU); shown.forEach(c => { c.style.left = c.style.top = c.style.zIndex = ''; });
+    // 联动牌太多、平铺放不下时，收紧间距（必要时互相压一点边）
+    const room = box.clientWidth - (stackU.length ? 148 : 0), need = showU.length * 86;
+    box.style.gap = showU.length > 1 && need + 8 * (showU.length - 1) > room ? Math.max(-50, (room - need) / (showU.length - 1)) + 'px' : '';
+    const cards = shown.concat(stackU.map(u => el(u)));
     let hint = box.querySelector('.empty-hint');
     if (!owner.played.length) { if (!hint) { hint = document.createElement('div'); hint.className = 'empty-hint'; box.appendChild(hint); } hint.textContent = isMine(v.active) && UI.isHuman(v.active) ? '把手牌拖到这里，或直接点击打出' : '本回合打出的牌会出现在这里'; }
     else if (hint) hint.remove();
@@ -346,6 +396,7 @@
     const total = cw + gap * (n - 1), x0 = (W - total) / 2;
     const presence = new Set(s.played.concat(s.statues.map(x => x.uid)).map(u => CARDS[v.cards[u]].faction));
     const pd = v.pending;
+    const canTrashHand = myTurn() && !(s.limbo && s.limbo.uid) && (s.trashOps || []).some(o => o.from.includes('hand'));
     cards.forEach((e, i) => {
       const off = i - (n - 1) / 2;
       e.style.setProperty('--x', (x0 + gap * i) + 'px');
@@ -358,6 +409,10 @@
       e.classList.toggle('playable', myTurn() && !selectable);
       e.classList.toggle('unplayable', !myTurn() && !selectable);
       e.classList.toggle('ally-ready', myTurn() && !!c.ally && c.faction !== 'neutral' && presence.has(c.faction));
+      // 有可删手牌的删牌机会时，手牌角上出现「删」按钮
+      let tb = e.querySelector('.hand-trash');
+      if (canTrashHand) { if (!tb) { tb = document.createElement('button'); tb.className = 'hand-trash'; tb.textContent = '删'; tb.title = '用删牌机会删除这张牌'; e.appendChild(tb); } }
+      else if (tb) tb.remove();
     });
   }
 
@@ -378,14 +433,16 @@
     else if (kind === 'trash') { const top = s.trash[s.trash.length - 1]; inner = `<div class="stack">${n > 1 ? '<i class="back" style="transform:translate(2px,2px)"></i>' : ''}</div><div class="face">${cardHTML(UI.view.cards[top])}</div><em class="stamp">删</em>`; }
     else if (kind === 'deck') inner = `<div class="stack">${Array.from({ length: Math.min(5, Math.ceil(n / 3)) }, (_, i) => `<i class="back" style="transform:translate(${-i * 1.5}px,${-i * 2}px)"></i>`).join('')}</div>`;
     else { const top = s.discard[s.discard.length - 1]; inner = `<div class="stack">${n > 1 ? '<i class="back" style="transform:translate(2px,2px)"></i>' : ''}</div><div class="face">${cardHTML(UI.view.cards[top])}</div>`; }
-    return `${inner}<span class="n">${n}</span><span class="lbl">${kind === 'deck' ? '牌库' : kind === 'trash' ? '删牌区' : '弃牌'}</span>`;
+    const ro = kind === 'trash' && seat === UI.viewer && myTurn() ? (s.recallOps || []).length : 0;
+    return `${inner}<span class="n">${n}</span>${ro ? `<span class="recall-badge" title="取回机会：点删牌区选 1 张放回弃牌堆">取回 ×${ro}</span>` : ''}<span class="lbl">${kind === 'deck' ? '牌库' : kind === 'trash' ? '删牌区' : '弃牌'}</span>`;
   }
   function renderPiles(v) {
     for (const [pos, seat] of [['me', UI.viewer], ['op', 1 - UI.viewer]]) {
       for (const kind of ['deck', 'discard', 'trash']) {
         const p = $(`#${kind}-${pos}`); const s = v.seats[seat]; if (!p) continue;
         const tr = s.trash || [];
-        const sig = kind + (kind === 'deck' ? s.deckCount : kind === 'trash' ? tr.length + ':' + tr[tr.length - 1] : s.discard.length + ':' + s.discard[s.discard.length - 1]);
+        const sig = kind + (kind === 'deck' ? s.deckCount : kind === 'trash' ? tr.length + ':' + tr[tr.length - 1] + ':' + (seat === UI.viewer && myTurn() ? (s.recallOps || []).length : 0) : s.discard.length + ':' + s.discard[s.discard.length - 1]);
+        if (kind === 'trash') p.classList.toggle('can-recall', seat === UI.viewer && myTurn() && (s.recallOps || []).length > 0);
         if (p.dataset.sig !== sig) { p.innerHTML = pileHTML(seat, kind); p.dataset.sig = sig; }
       }
     }
@@ -532,7 +589,7 @@
     t.classList.toggle('on', on);
     if (on) {
       $('#trashOpsN').textContent = `删牌机会 ×${ops.length}`;
-      const zones = Array.from(new Set([].concat(...ops.map(o => o.from)))).map(z => ({ hand: '手牌', discard: '弃牌堆', deck: '抽牌堆' }[z]));
+      const zones = Array.from(new Set(['played'].concat(...ops.map(o => o.from)))).map(z => ({ hand: '手牌', discard: '弃牌堆', deck: '抽牌堆', played: '出牌区' }[z]));
       const mk = Math.max(...ops.map(o => o.market || 0));
       t.querySelector('small').textContent = `本回合内有效，可删${zones.join('、')}${mk ? `，或移除市场中价格 ≤ ${mk} 的牌` : ''}`;
     }
@@ -756,7 +813,10 @@
           const pos = isMine(ev.seat) ? 'me' : 'op', r = A.hero[ev.seat];
           FX.shake($('#hero-' + pos)); FX.screenShake(Math.min(14, 4 + ev.n)); FX.sfx('hit');
           FX.burst(r.cx, r.cy, { n: 24, color: ['#ff5a5a', '#ffb36a', '#fff'], speed: 300, size: 8 });
-          if (ev.absorbed) { FX.float(r.cx, r.y - 4, `奶壳挡下 ${ev.absorbed}`, 's'); FX.burst(r.cx, r.cy, { n: 18, color: ['#cfe9ff', '#ffffff', '#9fd0ff'], speed: 220, size: 7, shape: 'shard', gravity: 300 }); }
+          if (ev.absorbed) {
+            FX.float(r.cx, r.y - 4, `奶壳挡下 ${ev.absorbed}`, 's'); FX.burst(r.cx, r.cy, { n: 18, color: ['#cfe9ff', '#ffffff', '#9fd0ff'], speed: 220, size: 7, shape: 'shard', gravity: 300 });
+            if (!ev.shield) { ringFx(ev.seat, 'r-shield', 'burst'); FX.burst(r.cx, r.cy, { n: 34, color: ['#cfe9ff', '#ffffff', '#7fc4ff'], speed: 420, size: 9, shape: 'shard', gravity: 160 }); FX.float(r.cx, r.y - 26, '破壳！', 's'); }
+          }
           if (ev.n) FX.float(r.cx, r.cy + 10, `-${ev.n}`, 'd');
           UI.disp[ev.seat].hp = ev.hp; UI.disp[ev.seat].shield = ev.shield || 0; renderHero(pos, ev.seat);
           await FX.wait(380); break;
@@ -787,9 +847,10 @@
           if (!isMine(ev.seat)) FX.toast(`对手进入守势：${CARDS[ev.id].name}——${guardDesc(ev.id)}`);
           await FX.wait(200); break;
         }
-        case 'guardCap': { const r = A.hero[ev.seat]; FX.float(r.cx, r.y - 30, `惊鸿一瞥 挡下 ${ev.cut}`, 's'); FX.burst(r.cx, r.cy, { n: 14, color: ['#c9b4ff', '#fff'], speed: 200, size: 7, shape: 'shard', gravity: 200 }); break; }
+        case 'guardCap': { ringFx(ev.seat, 'r-cap', 'pulse'); const r = A.hero[ev.seat]; FX.float(r.cx, r.y - 30, `惊鸿一瞥 挡下 ${ev.cut}`, 's'); FX.burst(r.cx, r.cy, { n: 14, color: ['#c9b4ff', '#fff'], speed: 200, size: 7, shape: 'shard', gravity: 200 }); break; }
         case 'thorns': {
           const from = A.hero[ev.from], to = A.hero[ev.seat];
+          ringFx(ev.from, 'r-thorns', 'pulse');
           await FX.orb({ x: from.cx, y: from.cy }, { x: to.cx, y: to.cy }, '#9fe07a', { size: 22, dur: 420, lift: 80 });
           FX.float(from.cx, from.y - 10, `榴莲刺 反伤 ${ev.n}`, 'txt'); break;
         }
@@ -816,12 +877,13 @@
           const r = A.trash[ev.seat]; FX.sfx('ally'); FX.float(r.cx, r.y - 6, '取回！', 'txt');
           // 去弃牌堆 / 牌库顶，或者对手取回到手牌：画一张牌从删牌区飞过去
           if (ev.to !== 'hand' || !isMine(ev.seat)) {
-            const tmp = document.createElement('div'); tmp.innerHTML = cardHTML(v.cards[ev.uid]); const el = tmp.firstElementChild;
+            const tmp = document.createElement('div'); tmp.innerHTML = cardHTML(UI.view.cards[ev.uid]); const el = tmp.firstElementChild;
             const to = ev.to === 'hand' ? A.oppHand : ev.to === 'top' ? A.deck[ev.seat] : A.discard[ev.seat];
             await FX.flyGhost(el, r, to, { lift: 50, dur: 640, fade: false });
           }
           break;
         }
+        case 'recallOp': if (isMine(ev.seat)) { const from = srcRect(ev.src, ev.seat); FX.float(from.cx, from.y, '+1 取回机会', 'txt'); FX.sfx('ally'); const tp = $('#trash-me'); if (tp) FX.shake(tp, 'pop'); } break;
         case 'trashOp': if (isMine(ev.seat)) { const r = FX.rect($('#trashOps')) ; const from = srcRect(ev.src, ev.seat); FX.float(from.cx, from.y, '+1 删牌机会', 'txt'); FX.sfx('ally'); } break;
         case 'trash': if (ev.from !== 'limbo') FX.sfx('scrap'); break;
         case 'statueSummon': FX.sfx('ally'); break;
@@ -908,6 +970,7 @@
       const scrap = t.closest('[data-scrap]');
       if (scrap && !useSheet()) { const card = scrap.closest('.card'); return onScrap(card.dataset.uid); }
       const card = t.closest('.card');
+      const ht = t.closest('.hand-trash'); if (ht) { const c = ht.closest('.card'); return NW.Screens.trashPicker(UI, 'hand', c.dataset.uid); }
       if (card && card.closest('#hand')) return onHandClick(card);
       if (card && card.closest('#market')) return onBuy(+card.dataset.slot, card);
       if (card && card.closest('#errandSlot')) return onBuy('p:errand', card);
@@ -922,7 +985,8 @@
       if (t.closest('#deck-me')) { if (myTurn() && UI.disp[UI.viewer].energy > 0) return UI.submit({ type: 'drawExtra' }); return NW.Screens.pileViewer(UI, 'deck'); }
       if (t.closest('#discard-me')) return NW.Screens.pileViewer(UI, 'discard');
       if (t.closest('#discard-op')) return NW.Screens.pileViewer(UI, 'oppDiscard');
-      if (t.closest('#trash-me')) { const pd = UI.view.pending; if (pd && pd.seat === UI.viewer && pd.kind === 'recall') return NW.Screens.picker(UI, 'trash'); return NW.Screens.pileViewer(UI, 'trash'); }
+      if (t.closest('.play-stack')) return NW.Screens.playStack(UI);
+      if (t.closest('#trash-me')) { const me = UI.view.seats[UI.viewer]; if (myTurn() && (me.recallOps || []).length) return NW.Screens.recallPicker(UI); return NW.Screens.pileViewer(UI, 'trash'); }
       if (t.closest('#trash-op')) return NW.Screens.pileViewer(UI, 'oppTrash');
       if (t.closest('#deck-op')) return FX.toast(`对手牌库剩余 ${op().deckCount} 张`);
       if (t.closest('#orb-energy') && myTurn() && UI.disp[UI.viewer].energy > 0) return UI.submit({ type: 'drawExtra' });
@@ -1044,6 +1108,7 @@
         hidePreview(); UI.sheet(lpCard.dataset.id, [], tipFor(lpCard));
       }, 480);
     }
+    if (e.target.closest('.hand-trash')) return;
     const card = e.target.closest('#hand .card');
     if (card && myTurn() && !(UI.view.pending)) { UI.drag = { el: card, uid: card.dataset.uid, x0: e.clientX, y0: e.clientY, active: false, lx: e.clientX, vx: 0 }; return; }
     if (myTurn() && UI.disp[UI.viewer].power > 0 && (e.target.closest('#orb-power') || e.target.closest('#hero-me .portrait'))) {

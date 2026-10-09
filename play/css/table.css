@@ -470,7 +470,7 @@ img{-webkit-user-drag:none;user-select:none}
 
 /* 奶壳 */
 .tag.shield{border-color:#9fd0ff;color:#d8ecff;background:#14304acc}
-.hero.shielded .portrait:after{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:inset 0 0 0 4px #cfe9ffcc,inset 0 0 22px #9fd0ff99;pointer-events:none;animation:shieldPulse 2.4s ease-in-out infinite}
+/* 奶壳改为 .hero-fx 里的蓝圈 + 角标 */
 .float.s{color:#cfe9ff;font-size:20px}
 @keyframes shieldPulse{50%{box-shadow:inset 0 0 0 4px #ffffffee,inset 0 0 30px #bfe0ffcc}}
 .market .card.elite:after{content:"招募可删牌";position:absolute;left:50%;top:-12px;transform:translateX(-50%);font-size:10px;font-weight:900;white-space:nowrap;padding:1px 8px;border-radius:8px;background:#a487ec;color:#fff;box-shadow:0 2px 6px #0008;z-index:4}
@@ -756,3 +756,41 @@ img{-webkit-user-drag:none;user-select:none}
 .seg-b.on{border-color:#ffe9a6;background:linear-gradient(#3a5a2c,#1f3a1c);box-shadow:0 0 0 1px #ffe9a6 inset}
 .seg-b.on b{color:#ffe9a6}
 #viewport.touch .seg-b b{font-size:19px}#viewport.touch .seg-b small{font-size:13px}
+/* 删牌区：取回机会角标 */
+.pile .recall-badge{position:absolute;left:50%;top:-22px;transform:translateX(-50%);white-space:nowrap;padding:2px 8px;border-radius:10px;background:linear-gradient(#b48cff,#7a4fd6);color:#fff;font-size:11px;font-weight:900;box-shadow:0 0 10px #b48cffaa,0 2px 5px #000a;z-index:4;pointer-events:none}
+.pile.can-recall{animation:recallHint 1.4s ease-in-out infinite}
+@keyframes recallHint{0%,100%{box-shadow:0 0 0 0 #b48cff00}50%{box-shadow:0 0 14px 4px #b48cffaa}}
+/* 出牌区叠放 */
+.play-stack{order:-1;position:relative;flex:0 0 auto;width:140px;height:120px;cursor:pointer;border-radius:10px}
+.play-stack .ps-cards{position:absolute;left:4px;top:6px;width:130px;height:110px;pointer-events:none}
+.play-stack .ps-cards .card{position:absolute;margin:0;translate:none!important}
+.play-stack .ps-cards .card .c-badges{display:none}
+.play-stack .ps-n{position:absolute;right:0;top:-4px;min-width:28px;height:22px;padding:0 6px;border-radius:11px;background:#122f27;border:1.5px solid var(--gold);color:#fff3c4;font:400 13px/19px var(--display);text-align:center;z-index:50;box-shadow:0 2px 6px #000a}
+.play-stack .ps-tip{position:absolute;left:50%;bottom:-4px;transform:translateX(-50%);white-space:nowrap;font-size:10px;padding:1px 7px;border-radius:8px;background:#0b211bdd;color:#e6dbb3;z-index:50}
+.play-stack.has-scrap .ps-tip{background:#c4410e;color:#fff}
+.play-stack:hover{box-shadow:0 0 0 2px #ffe9a688}
+.stack-list .sl-item{display:flex;flex-direction:column;align-items:center;gap:6px}
+.stack-list .sl-item small{font-size:11px;color:#cfd6be88}.stack-list .sl-item small.lit{color:#ffd76a}
+
+/* 头像外圈：奶壳（蓝，带角标）/ 伤害上限（红，内圈）/ 反伤（紫，外圈） */
+.hero-fx{position:absolute;left:10px;top:4px;width:96px;height:96px;pointer-events:none;z-index:3}
+.hero-fx i{position:absolute;border-radius:50%;opacity:0;transition:opacity .25s,transform .25s;transform:scale(.85);pointer-events:auto}
+.hero-fx .r-shield{inset:-3px;border:3px solid #bfe3ff;box-shadow:0 0 12px #9fd0ffcc,inset 0 0 14px #9fd0ff88;animation:shieldPulse 2.4s ease-in-out infinite}
+.hero-fx .r-cap{inset:6px;border:3px solid #ff5a5a;box-shadow:0 0 8px #ff3a3acc,inset 0 0 8px #ff5a5a88}
+.hero-fx .r-thorns{inset:-17px;border:3px dashed #b678ff;box-shadow:0 0 12px #a05cffcc;animation:thornSpin 14s linear infinite}
+.hero-fx.has-shield .r-shield,.hero-fx.has-cap .r-cap,.hero-fx.has-thorns .r-thorns{opacity:1;transform:none}
+.hero-fx.has-thorns .r-thorns{transform:none}
+@keyframes thornSpin{to{rotate:360deg}}
+.hero-fx .sh-badge{position:absolute;right:-8px;bottom:-6px;min-width:30px;height:30px;padding:0 5px;border-radius:15px;background:radial-gradient(circle at 35% 30%,#f2fbff,#9fd0ff 55%,#3f7fb8);border:2px solid #fff;box-shadow:0 0 10px #9fd0ffcc,0 2px 5px #000a;display:none;align-items:center;justify-content:center;pointer-events:auto;z-index:5}
+.hero-fx .sh-badge b{font:400 16px/1 var(--display);color:#0d2a44}
+.hero-fx.has-shield .sh-badge{display:flex}
+/* 反伤 / 伤害上限触发：虚化放大 */
+.hero-fx i.pulse{animation:ringPulse .8s ease-out forwards!important}
+@keyframes ringPulse{0%{opacity:1;transform:scale(1);filter:blur(0)}100%{opacity:0;transform:scale(1.55);filter:blur(7px)}}
+/* 破壳：炸开 */
+.hero-fx i.burst{animation:ringBurst .55s cubic-bezier(.2,.9,.3,1) forwards!important;border-style:dotted;border-width:5px}
+@keyframes ringBurst{0%{opacity:1;transform:scale(1)}40%{opacity:1;transform:scale(1.25)}100%{opacity:0;transform:scale(1.9);filter:blur(2px)}}
+/* 手牌上的「删」按钮（有删牌机会时） */
+#hand .card .hand-trash{position:absolute;right:-8px;top:-10px;width:34px;height:34px;border-radius:50%;border:2px solid #fff;background:radial-gradient(circle at 35% 30%,#ff9a8a,#d8402a 60%,#7a1a10);color:#fff;font:400 17px/1 var(--display);box-shadow:0 0 10px #ff5a3acc,0 2px 6px #000a;cursor:pointer;z-index:20;pointer-events:auto}
+#hand .card .hand-trash:hover{transform:scale(1.12)}
+#viewport.touch #hand .card .hand-trash{width:44px;height:44px;font-size:21px}

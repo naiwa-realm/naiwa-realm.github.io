@@ -69,11 +69,6 @@
       const best = opts.map(u => ({ u, v: cardValue(st, 1 - seat, idOf(st, u), prof) })).sort((a, b) => b.v - a.v)[0];
       return { type: 'choose', seat, value: best && best.v >= 4 ? best.u : 'skip' };
     }
-    if (pd.kind === 'recall') { // 取回最值钱的牌（献祭牌加分，起始牌不要）
-      const val = u => { const id = idOf(st, u), c = C(id); return keepValue(id) + (c.scrap ? 1.5 : 0) + (id === 'king' ? 1 : 0); };
-      const best = opts.slice().sort((a, b) => val(b) - val(a))[0];
-      return { type: 'choose', seat, value: best && val(best) >= 1.5 ? best : 'skip' };
-    }
     if (pd.kind === 'destroyStatue') {
       const best = opts.slice().sort((a, b) => statueValue(idOf(st, b)) - statueValue(idOf(st, a)))[0];
       return { type: 'choose', seat, value: best || 'skip' };
@@ -123,9 +118,9 @@
     const status = hand.find(h => h.c.type === 'status');
     if (status) return { type: 'play', seat, uid: status.uid };
     // 3) 角色：抽牌的先打
-    // 带「取回」的牌留到删牌和献祭之后再打（删牌区里有东西才取得回来）
+    // 取回是「取回机会」，打出后到回合结束前都能用，所以取回牌照常先打
     const isRecall = h => JSON.stringify(h.c.play || []).includes('recall');
-    const chars = hand.filter(h => h.c.type === 'char' && !isRecall(h));
+    const chars = hand.filter(h => h.c.type === 'char');
     if (chars.length) {
       chars.sort((a, b) => (JSON.stringify(b.c.play).includes('draw') ? 1 : 0) - (JSON.stringify(a.c.play).includes('draw') ? 1 : 0));
       return { type: 'play', seat, uid: chars[0].uid };
@@ -145,7 +140,7 @@
     if (prof.scrap) {
       const taunts = o.statues.filter(s => C(idOf(st, s.uid)).taunt);
       // 手里有取回牌：这回合献祭掉的牌还能放回弃牌堆，献祭几乎白赚
-      const recaller = hand.some(isRecall);
+      const recaller = hand.some(isRecall) || (p.recallOps || []).length > 0;
       for (const uid of p.played) {
         const id = idOf(st, uid);
         if (recaller && id === 'errand') return { type: 'scrap', seat, uid };
@@ -163,9 +158,14 @@
         }
       }
     }
-    // 5.5) 取回牌
-    const rc = hand.find(h => h.c.type === 'char' && isRecall(h));
-    if (rc) return { type: 'play', seat, uid: rc.uid };
+    // 5.5) 取回机会：取回最值钱的牌（献祭牌加分，起始牌不要），没有值得取的就放弃
+    if ((p.recallOps || []).length) {
+      const val = u => { const id = idOf(st, u), c = C(id); return keepValue(id) + (c.scrap ? 1.5 : 0) + (id === 'king' ? 1 : 0); };
+      for (let i = 0; i < p.recallOps.length; i++) {
+        const best = E.recallTargets(st, seat, p.recallOps[i]).sort((a, b) => val(b) - val(a))[0];
+        if (best && val(best) >= 1.5) return { type: 'useRecall', seat, op: i, value: best };
+      }
+    }
     // 6) 购买
     const buy = (prof.buyChance == null || Math.random() < prof.buyChance) ? knapsack(st, seat, prof) : null;
     if (buy && ok({ type: 'buy', seat, slot: buy.slot })) return { type: 'buy', seat, slot: buy.slot };

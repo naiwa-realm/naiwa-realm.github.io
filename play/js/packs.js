@@ -15,7 +15,7 @@
   'use strict';
   const NW = root.NW = root.NW || {};
 
-  NW.VERSION = '8.5';
+  NW.VERSION = '8.6';
 
   const FORMAT = 1;                       // 本版本能读的扩展包格式
   const KEY = 'naiwa.packs.v1';

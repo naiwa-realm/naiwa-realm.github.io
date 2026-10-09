@@ -84,7 +84,7 @@
     text: { play: '+1{c}，获得 1 次删牌机会。本回合每删 1 张自己的牌 +1{c}', ally: '获得 1 次删牌机会' }, flavor: '推开这扇门，牌库就轻了。' });
   def('thinker', { name: '思考奶蛙', type: 'char', faction: 'egg', cost: 2, art: 'thinker',
     play: [{ gain: 'coin', n: 2 }, { recall: { to: 'discard', maxCost: 4 } }], ally: [{ shield: 3 }],
-    text: { play: '+2{c}。从本回合删牌区取回 1 张费用 ≤ 4 的牌放回弃牌堆', ally: '+3{s}' }, flavor: '想了想，删掉的那张……好像还能用。' });
+    text: { play: '+2{c}。获得 1 次取回：从本回合删牌区选 1 张费用 ≤ 4 的牌放回弃牌堆', ally: '+3{s}' }, flavor: '想了想，删掉的那张……好像还能用。' });
   def('chieftain', { name: '奶国大力士', type: 'char', faction: 'egg', cost: 5, art: 'chieftain',
     play: [{ gain: 'coin', n: 2 }, { gain: 'power', n: 2 }], ally: [{ topdeckNext: true }],
     text: { play: '+2{c} +2{p}', ally: '本回合下一张购入的牌置于牌库顶' }, flavor: '叉腰站着，就是一种威慑。' });
@@ -115,7 +115,7 @@
     text: { play: '+3{p}。若你有雕塑，再 +1{p}', ally: '对手下回合开始时弃 1 张牌' }, flavor: '盔甲是借来的，气势是自己的。' });
   def('denial', { name: '根本没有这样的奶蛙', type: 'char', faction: 'iron', cost: 6, art: 'denial', artMode: 'photo', fullArt: true,
     play: [{ gain: 'power', n: 3 }, { recall: { to: 'discard' } }], ally: [{ shield: 3 }],
-    text: { play: '+3{p}。从本回合删牌区取回 1 张牌放回弃牌堆', ally: '+3{s}' }, flavor: '删了？根本没有删。你只是怕了。' });
+    text: { play: '+3{p}。获得 1 次取回：从本回合删牌区选 1 张牌放回弃牌堆', ally: '+3{s}' }, flavor: '删了？根本没有删。你只是怕了。' });
   def('king', { name: '曾经的王', type: 'char', faction: 'iron', cost: 8, art: 'king',
     play: [{ gain: 'power', n: 3 }, { gain: 'energy', n: 2 }, { if: 'hasStatue', then: [{ draw: 1 }] }], scrap: [{ destroyStatue: { optional: true } }],
     text: { play: '+3{p} +2{e}。若你有雕塑，抽 1 张', scrap: '击碎对手任意一座雕塑' }, flavor: '王冠没了，背心还在。' });

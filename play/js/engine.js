@@ -24,7 +24,7 @@
   const NW = root.NW = root.NW || {};
   if (typeof require === 'function' && !NW.CARDS) { try { Object.assign(NW, require('./cards.js')); } catch (e) { /* 浏览器环境 */ } }
 
-  const ENGINE_VERSION = 5;
+  const ENGINE_VERSION = 6;
   const DEFAULT_RULES = {
     hp: 30,                // 初始生命
     handSize: 5,           // 每回合抽牌数
@@ -94,7 +94,7 @@
       const p = {
         name: s.name || (i === 0 ? '玩家一' : '玩家二'), portrait: s.portrait || (i === 0 ? 'kungfu' : 'guard'), tint: s.tint || null,
         hp, maxHp: hp, deck: [], hand: [], discard: [], played: [], statues: [],
-        coin: 0, energy: 0, power: 0, held: 0, shield: 0, trashOps: [],
+        coin: 0, energy: 0, power: 0, held: 0, shield: 0, trashOps: [], recallOps: [],
         guards: [], pierce: false, nextPierce: false, lost: 0, // 守势状态（持续到自己下回合开始）/ 本回合破壳 / 本回合已失去的生命
         status: [], once: {}, allyDone: {}, topdeck: false, incomingDiscard: 0, limbo: null,
         trash: [], // 删牌区：本回合自己删掉或献祭的牌，公开；回合结束时清空（永久移出游戏）。本回合内可以被「取回」放回弃牌堆
@@ -263,10 +263,10 @@
         if (state.seats[other(seat)].statues.length) enqueue(state, { seat, kind: 'destroyStatue', maxHp: e.destroyStatue.maxHp || 99, optional: e.destroyStatue.optional !== false, src: ctx.src, prompt: '选择要击碎的对手雕塑' });
         continue;
       }
-      if (e.recall) {
-        const r = e.recall, to = r.to || 'discard';
-        enqueue(state, { seat, kind: 'recall', to, maxCost: r.maxCost == null ? 99 : r.maxCost, optional: true, src: ctx.src,
-          prompt: `从本回合的删牌区取回 1 张${r.maxCost != null ? '费用 ≤ ' + r.maxCost + ' 的' : ''}牌${to === 'hand' ? '加入手牌' : to === 'top' ? '放到牌库顶' : '放回弃牌堆'}` });
+      if (e.recall) { // 取回机会：和删牌机会一样主动使用（点删牌区），回合结束失效
+        const r = e.recall, op = { src: ctx.src || null, to: r.to || 'discard', maxCost: r.maxCost == null ? 99 : r.maxCost };
+        p.recallOps.push(op);
+        ev(state, { t: 'recallOp', seat, n: p.recallOps.length, src: op.src });
         continue;
       }
       if (e.discardSelf) { const n = Math.min(e.discardSelf, p.hand.length); if (n) enqueue(state, { seat, kind: 'discard', n, optional: false, src: ctx.src, prompt: `选择 ${n} 张手牌弃掉` }); continue; }
@@ -285,10 +285,13 @@
   }
   function trashTargets(state, seat, op) {
     const p = state.seats[seat], out = [];
-    for (const z of op.from) for (const u of (p[z] || [])) out.push({ uid: u, zone: z });
+    for (const z of op.from.includes('played') ? op.from : op.from.concat('played')) for (const u of (p[z] || [])) out.push({ uid: u, zone: z }); // 出牌区的牌也能删
     if (op.market) for (const u of state.market) if (u && card(state, u).cost <= op.market) out.push({ uid: u, zone: 'market' });
     return out;
   }
+
+  /** 取回机会可选的牌：本回合删牌区里费用不超过上限的牌 */
+  function recallTargets(state, seat, op) { return state.seats[seat].trash.filter(u => (card(state, u).cost || 0) <= op.maxCost); }
 
   /* ---------------- 待决选择队列 ---------------- */
   function enqueue(state, choice) {
@@ -314,7 +317,6 @@
       case 'sigma': return [].concat(p.hand, p.deck);
       case 'destroyStatue': return state.seats[other(c.seat)].statues.filter(s => s.hp <= c.maxHp).map(s => s.uid);
       case 'marketTrash': return state.market.filter(u => u && card(state, u).cost <= c.maxCost);
-      case 'recall': return p.trash.filter(u => (card(state, u).cost || 0) <= c.maxCost);
       default: return [];
     }
   }
@@ -346,11 +348,6 @@
       ev(state, { t: 'marketChurn', slot: i, old: value, uid: state.market[i], by: seat }); log(state, seat, `${p.name} 从市场移除了 ${name}`);
     } else if (c.kind === 'destroyStatue') {
       breakStatue(state, other(seat), value, seat, 'effect');
-    } else if (c.kind === 'recall') {
-      p.trash.splice(p.trash.indexOf(value), 1); p.stats.recalled++;
-      if (c.to === 'hand') p.hand.push(value); else if (c.to === 'top') p.deck.push(value); else p.discard.push(value);
-      ev(state, { t: 'recall', seat, uid: value, to: c.to, src: c.src || null });
-      log(state, seat, `${p.name} 从删牌区取回了 ${name}${c.to === 'hand' ? '' : c.to === 'top' ? '（放到牌库顶）' : '（放入弃牌堆）'}`);
     }
     state.pending = null; nextPending(state); return null;
   }
@@ -390,7 +387,7 @@
     if (sh && state.rules.shieldKeep) p.shield = Math.min(state.rules.shieldCap || 99, Math.floor(sh * state.rules.shieldKeep));
     p.pendingCoin = sh && state.rules.shieldToCoin ? Math.floor(sh / state.rules.shieldToCoin) : 0;
     if (p.shieldBank) { p.pendingCoin += sh; p.shieldBank = false; }  // 奶蛋守护者：没用掉的奶壳 1:1 变奶蛋
-    p.status = []; p.once = {}; p.allyDone = {}; p.topdeck = false; p.trashOps = []; p.turnPlays = 0; p.turnHeroHits = 0;
+    p.status = []; p.once = {}; p.allyDone = {}; p.topdeck = false; p.trashOps = []; p.recallOps = []; p.turnPlays = 0; p.turnHeroHits = 0;
     ev(state, { t: 'turnStart', seat, round: state.round, carried: p.power });
     if (p.pendingCoin) { gain(state, seat, 'coin', p.pendingCoin, { phase: 'shield' }); p.pendingCoin = 0; }
     if (p.power) log(state, seat, `憋笑保存的 ${p.power} 奶之力释放了`);
@@ -416,7 +413,7 @@
     if (p.trash.length) { const uids = p.trash.slice(); state.trash.push(...uids); p.trash = []; ev(state, { t: 'trashPurge', seat, uids, ids: uids.map(u => state.cards[u]) }); }
     const moved = p.hand.concat(p.played);
     p.discard.push(...p.hand, ...p.played); p.hand = []; p.played = [];
-    p.coin = p.energy = p.power = 0; p.status = []; p.topdeck = false; p.trashOps = []; p.pierce = false;
+    p.coin = p.energy = p.power = 0; p.status = []; p.topdeck = false; p.trashOps = []; p.recallOps = []; p.pierce = false;
     ev(state, { t: 'cleanup', seat, uids: moved });
     hook(state, 'turnEnd', seat);
     if (state.over) return;
@@ -502,6 +499,11 @@
         return null;
       }
       case 'undoTrash': return p.limbo ? null : '删牌区是空的';
+      case 'useRecall': {
+        const op = (p.recallOps || [])[a.op | 0]; if (!op) return '没有可用的取回机会';
+        if (!recallTargets(state, seat, op).includes(a.value)) return '这张牌不能取回';
+        return null;
+      }
       case 'useTrash': {
         const op = p.trashOps[a.op | 0]; if (!op) return '没有可用的删牌机会';
         if (!trashTargets(state, seat, op).some(t => t.uid === a.value)) return '这张牌不能删除';
@@ -596,11 +598,20 @@
           log(state, seat, `${p.name} 从市场移除了 ${name}`);
         } else {
           p[t.zone].splice(p[t.zone].indexOf(t.uid), 1); toTrash(state, seat, t.uid); p.stats.trashed++; noteTrash(state, seat, t.uid);
+          if (t.zone === 'played' && card(state, t.uid).type === 'status') { const k = p.status.indexOf(state.cards[t.uid]); if (k >= 0) p.status.splice(k, 1); }
           ev(state, { t: 'trash', seat, uid: t.uid, from: t.zone });
           const gates = p.status.filter(x => NW.CARDS[x].passive === 'gate').length;
           if (gates) { gain(state, seat, 'coin', gates, { src: t.uid, phase: 'gate' }); ev(state, { t: 'passive', seat, kind: 'gate', uid: t.uid }); }
-          log(state, seat, `${p.name} 删除了${t.zone === 'deck' ? '抽牌堆中的' : t.zone === 'hand' ? '手牌中的' : '弃牌堆中的'} ${name}`);
+          log(state, seat, `${p.name} 删除了${{ deck: '抽牌堆中的', hand: '手牌中的', played: '出牌区的', discard: '弃牌堆中的' }[t.zone] || ''} ${name}`);
         }
+        break;
+      }
+      case 'useRecall': {
+        const op = p.recallOps.splice(a.op | 0, 1)[0], uid = a.value, name = card(state, uid).name;
+        p.trash.splice(p.trash.indexOf(uid), 1); p.stats.recalled++;
+        if (op.to === 'hand') p.hand.push(uid); else if (op.to === 'top') p.deck.push(uid); else p.discard.push(uid);
+        ev(state, { t: 'recall', seat, uid, to: op.to, src: op.src });
+        log(state, seat, `${p.name} 从删牌区取回了 ${name}${op.to === 'hand' ? '' : op.to === 'top' ? '（放到牌库顶）' : '（放入弃牌堆）'}`);
         break;
       }
       case 'undoTrash': {
@@ -693,6 +704,7 @@
     for (const uid of p.played) tryA({ type: 'scrap', seat, uid });
     tryA({ type: 'undoTrash', seat });
     p.trashOps.forEach((op, i) => trashTargets(state, seat, op).forEach(t => out.push({ type: 'useTrash', seat, op: i, value: t.uid })));
+    p.recallOps.forEach((op, i) => recallTargets(state, seat, op).forEach(u => out.push({ type: 'useRecall', seat, op: i, value: u })));
     out.push({ type: 'endTurn', seat });
     return out;
   }
@@ -716,6 +728,7 @@
         hand: mine ? p.hand.slice() : null,
         limbo: p.limbo ? (mine ? clone(p.limbo) : { hidden: true }) : null,
         trashOps: mine ? clone(p.trashOps) : p.trashOps.map(() => ({ hidden: true })),
+        recallOps: clone(p.recallOps || []),
         // 删牌机会可选抽牌堆时，给出抽牌堆中的牌（按卡牌 id 排序，不泄露顺序）
         deckChoices: mine && p.trashOps.some(o => o.from.includes('deck')) ? p.deck.slice().sort((x, y) => state.cards[x] < state.cards[y] ? -1 : 1) : null,
         topdeck: p.topdeck, incomingDiscard: p.incomingDiscard, allyDone: Object.assign({}, p.allyDone),
@@ -763,6 +776,6 @@
     return st;
   }
 
-  NW.engine = { guardValue, ENGINE_VERSION, DEFAULT_RULES, createMatch, apply, check, legalActions, view, hash, replay, clone, pendingOptions, buyCost, trashTargets };
+  NW.engine = { guardValue, ENGINE_VERSION, DEFAULT_RULES, createMatch, apply, check, legalActions, view, hash, replay, clone, pendingOptions, buyCost, trashTargets, recallTargets };
   if (typeof module !== 'undefined' && module.exports) module.exports = NW;
 })(typeof window !== 'undefined' ? window : globalThis);

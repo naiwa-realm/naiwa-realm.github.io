@@ -105,11 +105,11 @@ packs/
 | `{ "sigmaTrash": true }` | 获得 1 次删牌机会，可以删抽牌堆里的牌 |
 | `{ "destroyStatue": { "maxHp": 5 } }` | 击碎对手一座耐久不超过 5 的雕塑 |
 | `{ "discardSelf": 1 }` | 自己弃牌 |
-| `{ "recall": { "to": "hand", "maxCost": 4 } }` | 从自己的删牌区取回 1 张牌：`to` 为 `hand` 手牌 / `top` 牌库顶 / `discard` 弃牌堆；`maxCost` 可选，限制费用 |
+| `{ "recall": { "to": "discard", "maxCost": 4 } }` | 获得 1 次取回机会（回合结束前点删牌区使用），从本回合删牌区取回 1 张牌：`to` 为 `discard` 弃牌堆（默认）/ `top` 牌库顶 / `hand` 手牌；`maxCost` 可选，限制费用 |
 | `{ "if": "hasStatue", "then": [...], "else": [...] }` | 条件：`hasStatue` `otherStatue` `hasEnergy` `charsInHand2` |
 | `{ "once": "名字", "then": [...] }` | 每回合限一次 |
 
-需要玩家做选择的效果（删牌、击碎、弃牌、取回）放在列表最后。
+需要玩家做选择的效果（击碎、弃牌）放在列表最后；删牌机会和取回机会由玩家在回合内自己决定何时使用。
 
 **删牌区**：每位玩家桌边都有一个公开的删牌区。删掉的牌、献祭的牌都进入这里，不再参与洗牌，只有 `recall` 能拿回来。
 

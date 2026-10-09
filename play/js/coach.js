@@ -147,7 +147,7 @@
     { key: 'guardOpp', when: c => c.mine && (c.op.guards || []).length > 0, target: '#hero-op .tag.guard', text: '对手处于「守势」：惊鸿一瞥让他每回合最多失去 6 点生命，榴莲刺让你每次攻击他本体时自己受伤。多出来的奶之力可以拿去拆雕塑，或者用「破壳」「憋笑」安排进攻时机。' },
     { key: 'curse', when: c => c.me.incomingDiscard > 0, target: '#hero-me .tag.warn', text: '你受到了压制：下回合开始时需要弃掉一张手牌。' },
     { key: 'limbo', when: c => c.me.limbo && c.me.limbo.uid, target: '#limbo', text: '西格奶把这张牌放进了待删区：回合结束时它会进入你的删牌区，在那之前可以点「撤回」。' },
-    { key: 'trashZone', when: c => c.mine && (c.me.trash || []).length > 0, target: '#trash-me', text: '这回合删掉或献祭的牌放在右下角的「删牌区」，回合结束时永久删除。在那之前，「根本没有这样的奶蛙」「思考奶蛙」可以把其中一张放回弃牌堆——先献祭曾经的王拆雕塑，再打出取回牌，王下次还能再来。' },
+    { key: 'trashZone', when: c => c.mine && (c.me.trash || []).length > 0, target: '#trash-me', text: '这回合删掉或献祭的牌放在右下角的「删牌区」，回合结束时永久删除。在那之前，「根本没有这样的奶蛙」「思考奶蛙」会给你取回机会（删牌区出现「取回」角标），点删牌区就能把其中一张放回弃牌堆——献祭曾经的王拆雕塑后把它取回来，王下次还能再来。' },
     { key: 'market', when: c => c.mine && c.me.coin >= 2 && !(c.me.hand || []).length, target: '#market', text: '手牌打完了。用奶蛋点击市场里的牌购买，最左边的「跑腿奶蛙」永远有货。' },
   ];
   function checkHints() {
