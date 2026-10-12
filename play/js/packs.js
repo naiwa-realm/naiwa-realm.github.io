@@ -15,7 +15,7 @@
   'use strict';
   const NW = root.NW = root.NW || {};
 
-  NW.VERSION = '8.6';
+  NW.VERSION = '1.0.0';
 
   const FORMAT = 1;                       // 本版本能读的扩展包格式
   const KEY = 'naiwa.packs.v1';
@@ -82,7 +82,7 @@
     if (!m.name || typeof m.name !== 'string') errors.push('缺少 name');
     if (!m.author || typeof m.author !== 'string') warnings.push('建议填写 author');
     if (!SEMVER.test(m.version || '')) errors.push('version 应写成 1.0.0 这样的三段数字');
-    if (m.game && m.game.min && typeof m.game.min !== 'string') errors.push('game.min 应为字符串，例如 "8.3"');
+    if (m.game && m.game.min && typeof m.game.min !== 'string') errors.push('game.min 应为字符串，例如 "1.0.0"');
     if (m.scripts) errors.push('format 1 不支持脚本（scripts），脚本扩展包会在以后的格式里开放');
 
     const cards = Array.isArray(m.cards) ? m.cards : [];

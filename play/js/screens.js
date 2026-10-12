@@ -51,10 +51,11 @@
       </div>
       <div class="logo"><h1>奶蛙领域</h1><p>THE MILK REALM · 奶国牌库对决</p></div>
       <div class="menu-list">
+        <button class="menu-btn" data-go="campaign"><span class="mi">征</span><span><b>远征</b><small>PvE 剧情闯关 · 已获得 ★ ${stars} / ${total}</small></span></button>
         <button class="menu-btn" data-go="ai"><span class="mi">战</span><span><b>快速对战</b><small>与电脑对手来一局</small></span>
           <span class="pick">${Object.entries(NW.AI.PROFILES).map(([k, p]) => `<span role="button" data-diff="${k}" class="${k === diff ? 'on' : ''}">${p.label}</span>`).join('')}</span></button>
-        <button class="menu-btn" data-go="campaign"><span class="mi">征</span><span><b>奶国远征</b><small>PvE 关卡 · 已获得 ★ ${stars} / ${total}</small></span></button>
         <button class="menu-btn" data-go="lobby"><span class="mi">对</span><span><b>玩家对战</b><small>同屏热座 · 联机对战（测试版）</small></span></button>
+        <button class="menu-btn" data-go="minigames"><span class="mi">棋</span><span><b>小游戏</b><small>奶蛙·推界 · 全新六角策略棋</small></span></button>
         <div style="display:flex;gap:10px">
           <button class="menu-btn" data-go="codex" style="flex:1;padding:10px 16px"><span class="mi" style="width:34px;height:34px;font-size:18px">鉴</span><span><b style="font-size:17px">卡牌图鉴</b></span></button>
           <button class="menu-btn" data-go="rules" style="flex:1;padding:10px 16px"><span class="mi" style="width:34px;height:34px;font-size:18px">规</span><span><b style="font-size:17px">玩法说明</b></span></button>
@@ -66,6 +67,26 @@
       </div>
       <div class="menu-foot">拖动手牌打出 · 拖动奶之力瞄准 · 空格 全部打出 · E 结束回合 · 右键查看卡牌</div>
       <div class="menu-ver">v${NW.VERSION}${NW.Packs ? ' · ' + NW.Packs.short(NW.Packs.fingerprint()) : ''}</div>`;
+  };
+
+/* ---------- 轻量小游戏大厅（推界与卡牌对局互相隔离） ---------- */
+  S.renderMinigames = () => {
+    $('#screen-minigames').innerHTML = `
+      <div class="menu-bg"></div>
+      <div class="mg-header">
+        <div><div class="mg-kicker">THE MILK REALM · MINI GAMES</div><div class="mg-title">奶蛙游乐场</div>
+          <div class="mg-subtitle">除了牌库对决，奶蛙们还有自己的竞技棋盘。</div></div>
+        <button class="mg-back" data-go="menu">← 返回主菜单</button>
+      </div>
+      <div class="mg-stage"><div class="mg-card">
+        <div class="mg-thumb"><img src="${NW.UI.artSrc('pushrealm_thumb')}" alt="奶蛙推界棋盘预览"></div>
+        <div class="mg-content"><span class="mg-pill">原创策略小游戏 · PUSHBOUND</span>
+          <h2>奶蛙 · 推界</h2>
+          <p>只需落子与推动，就能改变整张棋盘。六向推界、黑白交错、连接对边取胜。</p>
+          <div class="mg-stats"><span>9×9 六角棋盘</span><span>单人挑战 AI</span><span>本地双人</span><span>离线可玩</span></div>
+          <button class="mg-play" data-go="pushrealm">开始推界 →</button>
+        </div>
+      </div><div class="mg-coming"><i>✦</i><div>更多小游戏</div><small>敬请期待</small></div></div>`;
   };
 
   /* ---------- 扩展包（入口：本体信息、导入检查、社区目录） ---------- */
@@ -331,7 +352,7 @@
       <p>每位玩家在桌边都有一个<b>删牌区</b>（你的在右下角，对手的在右上角牌库旁边），本回合删掉和献祭的牌都先放在这里，公开可见。<b>回合结束时删牌区清空</b>，里面的牌永久移出游戏。在那之前，带「取回」效果的牌会给你 1 次<b>取回机会</b>（删牌区出现「取回」角标），回合结束前随时点删牌区，选其中一张<b>放回弃牌堆</b>：<b>根本没有这样的奶蛙</b>（嘴硬帮）可取回任意一张——献祭曾经的王拆掉雕塑后把王取回来，下次还能再拆；<b>思考奶蛙</b>（躺平派）可取回一张费用 ≤ 4 的牌。删牌机会也可以删除出牌区里已经打出的牌。</p>
       <h3>操作</h3>
       <p>拖动手牌到牌桌中央打出（或直接点击）· 按住「奶之力」拖出箭头瞄准 · 点击市场的牌购买 · 右键（手机上长按）任意卡牌查看详情<br>快捷键：<b>空格</b> 全部打出 · <b>E</b> 结束回合 · <b>D</b> 消耗奶劲抽牌 · <b>Esc</b> 取消</p>
-      <p>新手建议从「奶国远征」第一章开始，前三关有教官一步步带你操作。</p>
+      <p>新手建议从「远征」第一部第一章开始，前三关有教官一步步带你操作。</p>
       <h3>设置</h3><p>「出牌确认」默认关闭：点一下就打出 / 购买 / 攻击。开启后，点牌会先弹出卡牌详情和确认按钮，适合怕误触的玩家。</p>
       <div class="row-btns"><button class="btn ghost" data-top="confirm">${NW.UI.settings.confirmTap ? '出牌确认 开' : '出牌确认 关'}</button><button class="btn ghost" data-reset-hints>重新显示新手提示</button></div>`);
   };
@@ -458,6 +479,8 @@
         if (g === 'menu') { NW.UI.stop(); S.renderMenu(); S.show('menu'); }
         else if (g === 'campaign') { NW.UI.stop(); S.renderCampaign(); S.show('campaign'); }
         else if (g === 'lobby') { S.renderLobby(); S.show('lobby'); }
+        else if (g === 'minigames') { NW.UI.stop(); S.renderMinigames(); S.show('minigames'); NW.PushMini.showMobileHub(); }
+        else if (g === 'pushrealm') { NW.PushMini.open(); }
         else if (g === 'codex') S.codex();
         else if (g === 'rules') S.rules();
         else if (g === 'packs') S.packs();

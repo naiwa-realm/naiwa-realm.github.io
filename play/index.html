@@ -16,6 +16,7 @@
     <section id="screen-menu" class="screen"></section>
     <section id="screen-campaign" class="screen"></section>
     <section id="screen-lobby" class="screen"></section>
+    <section id="screen-minigames" class="screen"></section>
 
     <section id="screen-game" class="screen">
       <header class="topbar">
@@ -105,6 +106,24 @@
 <div id="rail" class="rail"><button data-rail="menu" class="r-menu">☰<small>菜单</small></button><button data-rail="all">全部<br>打出</button><button data-rail="draw">抽牌<small>奶劲 0</small></button><button data-rail="end" class="r-end">结束<br>回合</button></div>
 <div id="sheet" class="sheet hidden"><div class="sh-back"></div><div class="sh-panel"><div class="sh-card"></div><div class="sh-side"><div class="sh-tip"></div><div class="sh-btns"></div></div></div></div>
 
+<div id="pushrealm-portal" role="region" aria-label="奶蛙推界小游戏" aria-hidden="true">
+  <div class="pushrealm-nav"><button id="pushrealm-return" class="pushrealm-back" type="button">← 返回小游戏大厅</button><span class="pushrealm-caption">奶蛙领域 · 奶蛙推界 · 独立小游戏</span></div>
+  <iframe id="pushrealm-frame" title="奶蛙推界棋盘" allow="fullscreen" loading="eager"></iframe>
+</div>
+<div id="pushrealm-mobile-hub" aria-label="小游戏大厅手机版" aria-hidden="true">
+  <div class="mm-top"><button id="mobile-hub-return" class="mm-back" type="button">← 主菜单</button><span class="mm-logo">THE MILK REALM · MINI GAMES</span></div>
+  <h1>奶蛙游乐场</h1><p class="mm-desc">来点不一样的奶蛙对决！</p>
+  <article class="mm-tile">
+    <img id="mobile-hub-preview" class="mm-img" alt="奶蛙推界棋盘预览">
+    <span class="mm-label">原创策略小游戏 · PUSHBOUND</span>
+    <h2>奶蛙 · 推界</h2>
+    <p class="mm-rules">只有两种操作：落下一只奶蛙，选择是否向六个方向推动棋子。连接两条目标边的一方获胜。</p>
+    <div class="mm-tags"><b>9×9 六角棋盘</b><b>挑战 AI</b><b>本地双人</b><b>离线可玩</b></div>
+    <button id="mobile-hub-play" class="mm-start" type="button">开始推界 →</button>
+  </article>
+  <p class="mm-note">未来还有更多小游戏加入奶蛙游乐场</p>
+</div>
+
 <script src="js/cards.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/ai.js"></script>
@@ -116,5 +135,6 @@
 <script src="js/screens.js"></script>
 <script src="js/coach.js"></script>
 <script src="js/main.js"></script>
+<script src="js/minigames.js"></script>
 </body>
 </html>
